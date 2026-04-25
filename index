@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>암기력 훈련 v6.2 (보안 강화)</title>
+    <title>암기력 훈련 v6.3 (모바일 최적화)</title>
     <style>
-        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; }
         .hidden { display: none !important; }
         .panel { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; }
         #countdown { font-size: 8rem; color: #228be6; font-weight: bold; margin: 30px 0; }
         button { width: 100%; padding: 18px; font-size: 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: #228be6; color: white; transition: 0.2s; }
-        button:hover { background: #1c7ed6; }
-        .btn-mic { background: #f03e3e; min-height: 110px; width: 100%; margin-bottom: 15px; border-radius: 15px; }
+        .btn-mic { background: #f03e3e; min-height: 120px; width: 100%; margin-bottom: 15px; border-radius: 15px; position: relative; }
         .btn-mic.recording { background: #ff922b; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        /* 보안 입력 안내창 스타일 */
         #security-box { width: 100%; height: 60px; margin-top: 10px; background: #e9ecef; border: 2px dashed #ced4da; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #495057; font-weight: bold; font-size: 0.9rem; }
         .recog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
         .recog-item { padding: 15px 5px; background: #fff; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
@@ -29,18 +27,18 @@
 
 <div id="app" onclick="activateAudio()">
     <div id="step-setup">
-        <h2>🧠 암기력 훈련 v6.2</h2>
+        <h2>🧠 암기력 훈련 v6.3</h2>
+        <p style="font-size:0.8rem; color:#888;">모바일은 화면을 한 번 터치 후 시작하세요.</p>
         <div class="panel">
-            <label>🎯 훈련 단어 수</label>
+            <label>🎯 단어 수</label>
             <select id="wCount" style="width:100%; padding:12px; margin:10px 0;">
                 <option value="5">입문 (5개)</option>
                 <option value="12" selected>보통 (12개)</option>
                 <option value="15">집중 (15개)</option>
             </select>
-            <label>⏳ 지연 대기 시간</label>
+            <label>⏳ 지연 시간</label>
             <select id="dTime" style="width:100%; padding:12px; margin:10px 0;">
                 <option value="5">5초 (테스트용)</option>
-                <option value="600">10분</option>
                 <option value="1200" selected>20분 (표준)</option>
             </select>
         </div>
@@ -57,12 +55,12 @@
 
     <div id="step-input" class="hidden">
         <h3 id="input-title">회상 단계</h3>
-        <button id="mic-btn" class="btn-mic" onclick="toggleMic()">
+        <button id="mic-btn" class="btn-mic" onclick="toggleMicManually()">
             <span id="mic-text" style="font-size:1.2rem;">🎤 음성 인식 시작</span>
             <div id="stt-count" style="font-size:1rem; margin-top:10px; font-weight: bold; color: yellow;"></div>
         </button>
-        <div id="security-box">🔒 보안 모드: 입력 내용이 표시되지 않습니다.</div>
-        <button style="background:#40c057; width:100%; margin-top:15px;" onclick="pressNext()">입력 완료 및 다음</button>
+        <div id="security-box">🔒 보안: 입력 단어 비표시 모드</div>
+        <button style="background:#40c057; width:100%; margin-top:15px;" onclick="pressNext()">모두 말했습니다 (완료)</button>
     </div>
 
     <div id="step-wait" class="hidden">
@@ -72,17 +70,17 @@
     </div>
 
     <div id="step-recog" class="hidden">
-        <h3>✅ 재인 검사 (Recognition)</h3>
+        <h3>✅ 재인 검사</h3>
         <p>학습한 단어를 모두 선택하세요.</p>
         <div id="recog-grid" class="recog-grid"></div>
         <button style="margin-top:20px; width:100%; background:#40c057;" onclick="finishTraining()">결과 확인</button>
     </div>
 
     <div id="step-result" class="hidden">
-        <h2>📊 최종 결과</h2>
+        <h2>📊 분석 결과</h2>
         <div id="round-scores" class="panel" style="line-height:2; font-size:1.1rem;"></div>
         <div class="panel">
-            <h4 style="margin-top:0;">✅ 정답 대조표</h4>
+            <h4>✅ 정답 대조표</h4>
             <div id="answer-grid" style="text-align: left;"></div>
         </div>
         <button onclick="location.reload()" style="width:100%;">처음으로</button>
@@ -95,7 +93,7 @@
     let targetWords = [], currentRound = 1, roundScores = [], delayedScore = 0;
     let recogWords = [], selectedRecog = [], isAudioActive = false;
     let recognition, isRecording = false, waitTimer;
-    let hiddenInputText = ""; // 텍스트를 담을 내부 변수
+    let hiddenInputText = ""; 
 
     function activateAudio() {
         if (!isAudioActive) {
@@ -109,12 +107,30 @@
         recognition = new SpeechRec();
         recognition.lang = 'ko-KR';
         recognition.continuous = true;
+        recognition.interimResults = false;
+
         recognition.onresult = (e) => {
             const res = e.results[e.results.length - 1][0].transcript;
-            hiddenInputText += res + " "; // 변수에만 저장
-            const words = hiddenInputText.trim().split(/\s+/);
-            document.getElementById('stt-count').innerText = `● 현재 ${words.length}개 단어 인식 중...`;
+            hiddenInputText += res + " ";
+            updateCountDisplay();
         };
+
+        // 모바일 핵심 수정: 인식이 끊기면 다시 시작하도록 함
+        recognition.onend = () => {
+            if (isRecording) {
+                recognition.start(); // 강제 재시작
+            }
+        };
+
+        recognition.onerror = (e) => {
+            console.error("STT Error:", e.error);
+            if(e.error === 'network') alert("네트워크 연결을 확인하세요.");
+        };
+    }
+
+    function updateCountDisplay() {
+        const words = hiddenInputText.trim().split(/\s+/).filter(w => w.length > 0);
+        document.getElementById('stt-count').innerText = `● 현재 ${words.length}개 단어 인식됨`;
     }
 
     function showScreen(id) {
@@ -149,21 +165,23 @@
                 window.speechSynthesis.speak(msg);
             } else { 
                 showScreen('step-input'); 
-                hiddenInputText = ""; // 입력값 초기화
-                document.getElementById('stt-count').innerText = "";
+                hiddenInputText = ""; 
+                updateCountDisplay();
             }
         }
         speak();
     }
 
-    function toggleMic() {
-        if(!recognition) return alert("브라우저 미지원");
-        isRecording = !isRecording;
-        if(isRecording) {
+    function toggleMicManually() {
+        if(!recognition) return alert("음성 인식을 지원하지 않는 기기입니다.");
+        
+        if(!isRecording) {
+            isRecording = true;
             recognition.start();
             document.getElementById('mic-btn').classList.add('recording');
-            document.getElementById('mic-text').innerText = "인식 중... (말씀 후 클릭)";
+            document.getElementById('mic-text').innerText = "듣고 있습니다... (연속 입력 가능)";
         } else {
+            isRecording = false;
             recognition.stop();
             document.getElementById('mic-btn').classList.remove('recording');
             document.getElementById('mic-text').innerText = "🎤 음성 인식 시작";
@@ -171,7 +189,11 @@
     }
 
     function pressNext() {
-        if(isRecording) toggleMic();
+        isRecording = false; // 자동 재시작 방지
+        recognition.stop();
+        document.getElementById('mic-btn').classList.remove('recording');
+        document.getElementById('mic-text').innerText = "🎤 음성 인식 시작";
+
         let s = 0;
         targetWords.forEach(w => { if(hiddenInputText.includes(w)) s++; });
 
@@ -190,11 +212,11 @@
         let t = parseInt(document.getElementById('dTime').value);
         waitTimer = setInterval(() => {
             document.getElementById('wait-timer').innerText = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`;
-            if(t-- <= 0) { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; }
+            if(t-- <= 0) { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; updateCountDisplay(); }
         }, 1000);
     }
 
-    function skipWait() { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; }
+    function skipWait() { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; updateCountDisplay(); }
 
     function startRecogPhase() {
         showScreen('step-recog');
