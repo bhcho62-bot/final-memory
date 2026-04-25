@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>암기력 훈련 v4.3 - Full 1000 Words</title>
+    <title>암기력 훈련 v5.3 - Blind Mode</title>
     <style>
         body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; position: relative; }
@@ -13,19 +13,24 @@
         #countdown { font-size: 8rem; color: #228be6; font-weight: bold; margin: 30px 0; }
         button { width: 100%; padding: 18px; font-size: 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; background: #228be6; color: white; }
         button:hover { background: #1c7ed6; }
-        .btn-mic { background: #f03e3e; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        
+        .btn-mic { background: #f03e3e; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 110px; }
         .btn-mic.recording { background: #ff922b; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        .stt-visualizer { font-size: 1.1rem; margin-top: 8px; color: #fff; font-weight: bold; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 15px; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        
         .btn-next { background: #40c057; margin-top: 10px; }
         .btn-cancel { background: #868e96; margin-top: 20px; font-size: 0.9rem; padding: 12px; }
-        textarea { width: 100%; height: 100px; margin-top: 10px; box-sizing: border-box; font-size: 1.1rem; padding: 10px; border: 2px solid #ddd; border-radius: 10px; }
+        
+        /* 보안 입력창: 글자가 절대 보이지 않도록 수정 */
+        #u-input { width: 100%; height: 60px; margin-top: 10px; box-sizing: border-box; font-size: 1rem; padding: 15px; border: 2px solid #eee; border-radius: 10px; resize: none; background: #f8f9fa; color: transparent; text-shadow: 0 0 0 #f8f9fa; caret-color: transparent; pointer-events: none; }
+        
         .round-badge { background: #e7f5ff; color: #1971c2; padding: 5px 15px; border-radius: 20px; display: inline-block; margin-bottom: 15px; font-weight: bold; }
-        .word-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
-        .word-tile { background: #f1f3f5; padding: 15px 5px; border-radius: 10px; cursor: pointer; font-weight: 500; border: 2px solid transparent; transition: 0.2s; font-size: 0.9rem; }
-        .word-tile.selected { background: #e7f5ff; border-color: #228be6; color: #228be6; font-weight: bold; }
         .score-summary { background: #e7f5ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; border: 1px solid #1971c2; }
-        .history-list { max-height: 150px; overflow-y: auto; font-size: 0.85rem; background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: left; }
-        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1fr 2fr; }
+        .history-section { margin-top: 30px; text-align: left; border-top: 2px solid #eee; padding-top: 20px; }
+        .history-list { max-height: 180px; overflow-y: auto; font-size: 0.85rem; background: #fff; border: 1px solid #ddd; border-radius: 10px; margin-top: 10px;}
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
@@ -36,22 +41,33 @@
         <input type="range" id="vol" min="0" max="1" step="0.1" value="0.7" style="width:100%" oninput="updateVol(this.value)">
     </div>
 
-    <div id="round-badge" class="round-badge">훈련 설정</div>
-    <h2 id="main-title">🧠 암기력 훈련 v4.3</h2>
+    <div id="round-badge" class="round-badge">맞춤형 암기 훈련</div>
+    <h2 id="main-title" style="margin-top:0;">🧠 블라인드 회상 테스트</h2>
 
     <div id="screens">
         <div id="step-setup">
             <div class="panel">
-                <div class="option-item"><label>🎯 단어 수</label>
-                    <select id="wCount" style="width:100%"><option value="5">5개</option><option value="10">10개</option><option value="15" selected>15개</option><option value="20">20개</option></select>
+                <div class="option-item"><label>🎯 훈련 단어 수</label>
+                    <select id="wCount" style="width:100%">
+                        <option value="5">입문 (5개)</option>
+                        <option value="12">보통 (12개)</option>
+                        <option value="15">집중 (15개)</option>
+                        <option value="24" selected>도전 (24개)</option>
+                    </select>
                 </div>
                 <div class="option-item" style="margin-top:10px;"><label>⏳ 장기 기억 대기</label>
-                    <select id="dTime" style="width:100%"><option value="5">5초(테스트)</option><option value="300">5분</option><option value="1200" selected>20분</option></select>
+                    <select id="dTime" style="width:100%; margin-top:5px;">
+                        <option value="5">5초(테스트)</option>
+                        <option value="600">10분</option>
+                        <option value="1200" selected>20분</option>
+                    </select>
                 </div>
             </div>
             <button onclick="pressStart()">훈련 시작</button>
-            <div style="margin-top:20px; font-weight:bold; text-align:left;">📜 최근 기록</div>
-            <div id="main-history-list" class="history-list"></div>
+            <div class="history-section">
+                <div style="font-weight:bold;">📜 최근 기록</div>
+                <div id="main-history-list" class="history-list"></div>
+            </div>
         </div>
 
         <div id="step-ready" class="hidden"><div id="countdown">3</div></div>
@@ -59,74 +75,140 @@
         <div id="step-speak" class="hidden">
             <div id="speak-idx" style="font-size:1.5rem; font-weight:bold; color:#e03131;">1 / 15</div>
             <div style="font-size: 5rem; margin: 20px;">📢</div>
-            <p>잘 듣고 기억하세요!</p>
+            <p>단어를 잘 듣고 암기하세요.</p>
         </div>
 
         <div id="step-input" class="hidden">
-            <div id="input-title" class="round-badge">제 1라운드</div>
-            <div id="input-msg" style="margin-bottom:10px; font-weight:bold;">기억나는 단어를 말씀하세요!</div>
-            <button id="mic-btn" class="btn-mic" onclick="toggleMic()">🎤 음성 인식 시작</button>
-            <textarea id="u-input" placeholder="여기에 입력하거나 말씀하세요..."></textarea>
-            <button class="btn-next" onclick="pressNext()">확인</button>
+            <div id="input-title" class="round-badge" style="background:#ffec99; color:#f08c00;">회상 단계</div>
+            <p id="input-msg" style="margin-bottom:15px; font-weight:bold;">기억나는 단어를 말씀하세요.</p>
+            
+            <button id="mic-btn" class="btn-mic" onclick="toggleMic()">
+                <span id="mic-icon" style="font-size:2rem;">🎤</span>
+                <span id="mic-text">음성 인식 시작</span>
+                <div id="stt-visualizer" class="stt-visualizer hidden">대기 중...</div>
+            </button>
+
+            <textarea id="u-input" readonly placeholder="보안 모드: 음성 인식 시 단어가 보이지 않습니다."></textarea>
+            
+            <button class="btn-next" onclick="pressNext()">확인 (다음)</button>
         </div>
 
         <div id="step-wait" class="hidden">
-            <p>☕ 장기 기억으로 전환 중...</p>
+            <div style="margin-bottom: 20px; color: #495057;">☕ 정보가 장기 기억으로 고정되는 중...</div>
             <div id="wait-timer" style="font-size: 4rem; font-weight: bold; color: #228be6;">00:00</div>
-            <button class="btn-cancel" onclick="skipWait()">바로 테스트</button>
-        </div>
-
-        <div id="step-recognition" class="hidden">
-            <div class="round-badge" style="background:#d0ebff; color:#1864ab;">최종 확인: 단어 고르기</div>
-            <p>24개 중 나왔던 단어를 모두 골라보세요!</p>
-            <div id="word-pool" class="word-grid"></div>
-            <button class="btn-next" onclick="submitRecognition()">최종 결과 보기</button>
+            <button class="btn-cancel" onclick="skipWait()">바로 결과 보기</button>
         </div>
 
         <div id="step-result" class="hidden">
-            <h2>🎊 훈련 결과</h2>
+            <h2 id="final-res">📊 최종 결과</h2>
             <div id="round-scores" class="score-summary"></div>
-            <div id="answer-list" style="text-align: left; background:#f8f9fa; padding:15px; border-radius:10px; line-height:2; font-size: 0.9rem;"></div>
-            <button style="margin-top:20px;" onclick="location.reload()">다시 하기</button>
+            <div id="answer-list" style="text-align: left; background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:20px; line-height:2.2;"></div>
+            <button onclick="location.reload()">처음으로</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 실제로 1,000개 수준의 단어 데이터베이스 ---
-    const wordDB = [
-        "사과", "우주", "기타", "강아지", "비행기", "시계", "축구", "모자", "고래", "연필", "구름", "자전거", "커피", "나무", "사진", "신발", "우산", "전화", "의자", "책상", "창문", "침대", "치약", "비누", "수건", "접시", "가위", "로봇", "풍선", "계단", "기차", "버스", "포크", "냄비", "지도", "거울", "안경", "지갑", "열쇠", "가방", "우유", "라면", "포도", "수박", "오이", "감자", "계란", "치즈", "사탕", "보리", "사자", "호랑이", "코끼리", "기린", "토끼", "공룡", "거미", "장미", "나비", "개미", "태양", "지구", "바다", "무지개", "파도", "번개", "안개", "낙엽", "뿌리", "줄기", "참새", "까치", "독수리", "상어", "문어", "조개", "고추", "마늘", "배추", "양파", "버섯", "단풍", "태풍", "들판", "동굴", "계곡", "호수", "모래", "먼지", "소금", "학교", "병원", "은행", "공원", "시장", "서점", "약국", "교회", "식당", "카페", "의사", "교사", "가수", "경찰", "군인", "판사", "농부", "화가", "작가", "편지", "뉴스", "영화", "음악", "축제", "휴가", "여행", "선물", "약속", "기억", "마을", "도시", "나라", "하늘", "바닥", "천장", "지붕", "대문", "마당", "복도", "공항", "부두", "광장", "국장", "공장", "약방", "교실", "칠판", "사전", "행복", "사랑", "희망", "용기", "미소", "오늘", "내일", "어제", "미래", "노래", "그림", "운동", "게임", "수영", "등산", "독서", "공부", "대화", "친절", "지혜", "평화", "우정", "믿음", "기쁨", "슬픔", "소원", "인사", "칭찬", "소리", "냄새", "느낌", "모양", "색깔", "무게", "길이", "속도", "온도", "날씨", "계절", "아침", "점심", "저녁", "새벽", "자정", "과거", "현재", "인연", "추억", "망치", "바늘", "단추", "풍차", "액자", "성곽", "촛불", "장갑", "소나무", "대나무", "앵무새", "다람쥐", "너구리", "돌고래", "펭귄", "개구리", "오징어", "딸기", "바나나", "박물관", "등대", "캠핑", "스키", "튜브", "낚시", "나침반", "배낭", "텐트", "라디오", "카메라", "노트북", "주전자", "다리미", "선풍기", "냉장고", "세탁기", "청소기", "넥타이", "귀걸이", "반지", "팔찌", "장화", "슬리퍼", "보석함", "주사기", "청진기", "태극기", "가야금", "거문고", "해금", "단소", "피리", "나팔", "드럼", "소반", "방석", "베개", "이불", "부채", "호미", "괭이", "맷돌", "절구", "키질", "물레", "도자기", "기와", "초가", "정자", "서원", "향교", "궁궐", "성문", "봉수", "주막", "장터", "객주", "어사", "장군", "선비", "도령", "낭자", "광대", "백정", "기생", "무당", "스님", "신부", "목사", "수녀", "학생", "교수", "학장", "과장", "팀장", "부장", "이사", "상무", "전무", "사장", "회장", "직원", "비서", "대리", "사원", "주임", "기사", "간호사", "영양사", "미용사", "조리사", "제과사", "제빵사", "목수", "석공", "어부", "해녀", "광부", "심판", "관중", "응원", "승리", "패배", "경기장", "체육관", "운동장", "수영장", "골프장", "스키장", "볼링장", "당구장", "탁구장", "헬스장", "기원", "노래방", "피시방", "만화방", "찜질방", "목욕탕", "세탁소", "이발소", "미용실", "꽃집", "빵집", "떡집", "과일집", "생선집", "고깃집", "문구점", "완구점", "안경점", "금은방", "철물점", "가구점", "옷가게", "신발집", "가방집", "이불집", "그릇집", "사진관", "인쇄소", "도장집", "열쇠집", "수선집", "주유소", "충전소", "정비소", "세차장", "주차장", "터미널", "정류장", "지하철", "택시", "트럭", "지프", "여객기", "전투기", "우주선", "로켓", "나룻배", "어선", "화물선", "유람선", "잠수함", "항구", "검문소", "관제탑", "활주로", "격납고", "무기고", "병영", "초소", "막사", "훈련소", "교도소", "법원", "국회", "시청", "구청", "우체국", "도서관", "문화재", "보물", "국보", "사적", "명승", "유물", "화석", "고분", "무덤", "묘지", "비석", "석등", "단청", "서까래", "기둥", "굴뚝", "우물", "장독대", "곳간", "닭장", "개집", "벌통", "둥지", "동네", "골목", "가로수", "전신주", "소화전", "우체통", "신호등", "육교", "지하도", "터널", "교량", "휴게소", "우표", "엽서", "봉투", "소포", "택배", "등기", "영수증", "지폐", "동전", "수표", "카드", "통장", "도장", "서명", "여권", "면허증", "자격증", "학생증", "회원증", "출입증", "계약서", "신청서", "보고서", "일기장", "수첩", "공책", "교과서", "참고서", "문제집", "백과", "잡지", "신문", "소설", "시집", "수필", "희곡", "만화", "동화", "화보", "달력", "시계", "온도계", "저울", "각도기", "돋보기", "현미경", "스피커", "이어폰", "마이크", "전화기", "휴대폰", "태블릿", "모니터", "키보드", "마우스", "프린터", "스캐너", "복사기", "가습기", "제습기", "건조기", "에어컨", "보일러", "온수기", "오븐", "그릴", "밥솥", "포트", "믹서기", "토스터", "싱크대", "샤워기", "변기", "욕조", "세면대", "칫솔", "샴푸", "린스", "면도기", "화장지", "물티슈", "화장대", "향수", "목걸이", "선글라스", "보청기", "지팡이", "휠체어", "유모차", "카시트", "매트리스", "쿠션", "소파", "식탁", "서랍장", "옷장", "이불장", "책장", "신발장", "진열장", "장식장", "전등", "스탠드", "꽃병", "양산", "우비", "샌들", "실내화", "덧버선", "양말", "스타킹", "내의", "잠옷", "속옷", "겉옷", "상의", "하의", "바지", "치마", "반바지", "긴바지", "셔츠", "니트", "가디건", "코트", "점퍼", "재킷", "정장", "교복", "비옷", "한복", "비니", "헬멧", "멜빵", "배낭", "지갑", "발찌", "머리핀", "머리띠", "머리끈", "가발", "핫팩", "자두", "앵두", "살구", "참외", "대추", "밤나무", "은행잎", "고사리", "미나리", "도라지", "더덕", "취나물", "시금치", "상추", "깻잎", "양배추", "브로콜리", "토마토", "가지", "호박", "옥수수", "완두콩", "강낭콩", "검정콩", "땅콩", "호두", "잣나무", "메밀", "수수", "조기", "갈치", "고등어", "꽁치", "멸치", "낙지", "멍게", "해삼", "전복", "소라", "가리비", "꽃게", "대게", "새우", "메기", "붕어", "잉어", "미꾸라지", "뱀장어", "황소", "젖소", "염소", "양떼", "당나귀", "노루", "고슴도치", "두더지", "박쥐", "올빼미", "부엉이", "두루미", "고니", "오리", "거위", "꿩", "비둘기", "직박구리", "제비", "꾀꼬리", "뻐꾸기", "딱따구리", "메뚜기", "잠자리", "매미", "귀뚜라미", "사마귀", "꿀벌", "말벌", "풍뎅이", "하늘소", "무당벌레", "장수풍뎅이", "지렁이", "달팽이", "올챙이", "도롱뇽", "메아리", "이슬", "서리", "우박", "함박눈", "가랑비", "소나기", "장마", "으스름", "노을", "새벽녘", "황혼", "그믐달", "초승달", "보름달", "은하수", "북극성", "유성", "혜성", "분화구", "절벽", "낭떠러지", "봉우리", "등성이", "산기슭", "벌판", "갯벌", "모래사장", "여울", "폭포", "소용돌이", "썰물", "밀물", "해류", "빙하", "수평선", "지평선", "허공", "대기", "진공", "입자", "원자", "분자", "중력", "마찰", "탄성", "전기", "자기", "열기", "냉기", "습기", "공기", "산소", "수소", "탄소", "질소", "황금", "백금", "구리", "강철", "유리", "석유", "석탄", "목재", "가죽", "비단", "무명", "삼베", "모직", "화학", "물리", "수학", "지질", "생물", "천문", "철학", "심리", "역사", "정치", "경제", "문화", "예술", "종교", "법률", "교육", "과학", "기술", "산업", "농업", "상업", "금융", "무역", "통신", "방송", "언론", "출판", "관광", "복지", "환경", "보건", "체육", "국방", "외교", "행정", "사법", "입법", "조직", "가족", "친척", "이웃", "친구", "동료", "동창", "선배", "후배", "스승", "제자", "손님", "주인", "어른", "아이", "청년", "노인", "남자", "여자", "부모", "자녀", "형제", "자매", "부부", "조상", "후손", "민족", "인류", "영혼", "정신", "육체", "생명", "죽음", "탄생", "성장", "노화", "질병", "건강", "수명", "운명", "숙명", "우연", "필연", "원인", "결과", "목적", "수단", "방법", "능력", "실력", "노력", "경험", "지식", "재능", "천재", "범인", "영웅", "악인", "진실", "거짓", "선악", "정의", "불의", "평등", "자유", "권리", "의무", "책임", "질서", "혼란", "갈등", "조화", "통일", "분열", "전쟁", "평화", "재해", "축복", "행운", "불행", "고난", "역경", "성공", "실패", "승리", "패배", "영광", "굴욕", "환희", "절망", "고독", "소외", "열정", "냉소", "불안", "공포", "분노", "슬픔", "기쁨", "사랑", "미움", "질투", "연민", "희망", "절망", "욕망", "절제", "겸손", "오만", "용기", "비겁", "성실", "태만", "정직", "기만", "관용", "보복", "신뢰", "불신", "존중", "멸시", "이해", "오해", "화해", "용서", "감사", "불만", "만족", "허무", "충만", "이상", "현실", "전통", "현대", "보수", "진보", "국가", "민족", "사회", "집단", "개인", "시민", "국민", "인민", "동포", "동맹", "적대", "평화", "전쟁", "조약", "협정", "교류", "협력", "경쟁", "대결", "번영", "쇠퇴", "흥망", "성쇠", "역사", "문화", "예술", "학문", "사상", "철학", "종교", "도덕", "윤리", "가치", "규범", "제도", "구조", "기능", "변화", "발전", "혁신", "창조", "모방", "계승", "발굴", "보존", "파괴", "오염", "정화", "자연", "환경", "생태", "우주", "세계", "지구", "대륙", "해양", "반도", "섬들", "산맥", "강줄기", "평야", "분지", "고원", "사막", "빙하", "화산", "지진", "해일", "가뭄", "홍수", "폭설", "한파", "폭염", "황사", "미세먼지", "기후", "날씨", "계절", "시각", "시간", "날짜", "요일", "월별", "연도", "세기", "시대", "역사", "미래", "영원", "찰나", "순간", "직후", "직전", "과거", "현재", "미래", "인생", "운명", "삶의질", "가치관", "세계관", "자아", "정체성", "개성", "인격", "성격", "태도", "습관", "취향", "관심", "열정", "의지", "신념", "꿈과", "희망"
-    ];
+    // 단어 DB (생략)
+    const wordDB = ["사과", "우주", "기타", "강아지", "비행기", "시계", "축구", "모자", "고래", "연필", "구름", "자전거", "커피", "나무", "사진", "신발", "우산", "전화", "의자", "책상", "창문", "침대", "치약", "비누", "수건", "접시", "가위", "로봇", "풍선", "계단", "기차", "버스", "포크", "냄비", "지도", "거울", "안경", "지갑", "열쇠", "가방", "우유", "라면", "포도", "수박", "오이", "감자", "계란", "치즈", "사탕", "보리", "사자", "호랑이", "코끼리", "기린", "토끼", "곰", "장미", "나비", "개미", "별", "달", "태양", "지구", "산", "강", "바다", "숲", "바람", "무지개", "파도", "번개", "안개", "낙엽", "뿌리", "줄기", "파리", "모기", "참새", "까치", "독수리", "상어", "거북이", "문어", "조개", "고추", "마늘", "배추", "양파", "버섯", "단풍", "눈사람", "태풍", "들판", "동굴", "계곡", "호수", "모래", "조약돌", "먼지", "소금", "학교", "병원", "은행", "공원", "시장", "서점", "약국", "교회", "식당", "카페", "의사", "교사", "가수", "요리사", "경찰", "군인", "판사", "농부", "화가", "작가", "편지", "뉴스", "영화", "음악", "축제", "휴가", "여행", "선물", "약속", "기억", "마을", "도시", "나라", "하늘", "바닥", "천장", "지붕", "대문", "마당", "복도", "공항", "부두", "광장", "국장", "공장", "약방", "교실", "칠판", "사전", "행복", "사랑", "희망", "용기", "꿈", "미소", "오늘", "내일", "어제", "미래", "노래", "춤", "그림", "운동", "게임", "수영", "등산", "독서", "공부", "대화", "친절", "지혜", "평화", "우정", "믿음", "기쁨", "슬픔", "소원", "인사", "칭찬", "소리", "냄새", "느낌", "모양", "색깔", "무게", "길이", "속도", "온도", "날씨", "계절", "아침", "점심", "저녁", "새벽", "자정", "과거", "현재", "인연", "추억", "망치", "바늘", "단추", "풍차", "액자", "성곽", "항아리", "촛불", "돗자리", "장갑", "목도리", "소나무", "대나무", "해바라기", "민들레", "앵무새", "다람쥐", "너구리", "돌고래", "펭귄", "개구리", "오징어", "딸기", "바나나", "미술관", "박물관", "등대", "캠핑", "스키", "튜브", "낚시", "나침반", "배낭", "텐트", "라디오", "카메라", "노트북", "망원경", "주전자", "다리미", "선풍기", "냉장고", "세탁기", "청소기", "넥타이", "귀걸이", "반지", "팔찌", "장화", "슬리퍼", "장바구니", "보석함", "주사기", "청진기", "태극기", "가야금", "거문고", "해금", "소반", "방석", "화로", "족자", "병풍", "부채", "가야", "백제", "신라", "고려", "조선", "역사", "문화", "예술", "과학", "경제", "정치", "사회", "법률", "교육", "종교", "철학", "심리", "언어", "문학", "수학", "물리", "화학", "생물", "천문", "지리", "기술", "통신", "우주선", "인공지능", "에너지", "환경", "기후", "재난", "안전", "평등", "인권", "복지", "자유", "정의", "평화", "화합", "나눔", "봉사", "협력", "도전", "열정", "창의", "끈기", "성실", "인내", "겸손", "배려", "공감", "존중", "책임", "정직", "긍정", "감사", "위로", "용서", "화해", "안녕", "출발", "도착", "성공", "실패", "기회", "선택", "변화", "성장", "발견", "발명", "발전", "전통", "미래", "세계", "지구촌", "인류", "가족", "친구", "이웃", "동료", "스승", "제자", "부모", "자녀", "형제", "남매", "부부", "할머니", "할아버지", "삼촌", "이모", "고모", "사촌", "조카", "손자", "손녀", "이웃집", "고향", "여행지", "축구장", "야구장", "농구장", "수영장", "도서관", "영화관", "공연장", "음악당", "전시장", "경기장", "연구소", "방송국", "신문사", "소방서", "경찰서", "우체국", "동사무소", "구청", "시청", "도청", "정부", "국회", "법원", "대사관", "호텔", "여관", "민박", "텐트장", "유원지", "놀이공원", "동물원", "식물원", "수족관", "해변", "섬", "항구", "기차역", "터미널", "정류장", "고속도로", "골목", "육교", "지하도", "횡단보도", "신호등", "표지판", "가로등", "전봇대", "담장", "대문", "현관", "거실", "주방", "욕실", "베란다", "다용도실", "창고", "서재", "방", "마루", "천장", "바닥", "벽지", "장판", "커튼", "블라인드", "조명", "스위치", "콘센트", "냉방기", "난방기", "가습기", "제습기", "정수기", "식기세척기", "오븐", "전자레인지", "인덕션", "압력솥", "토스터", "믹서기", "커피머신", "커피포트", "그라인더", "찻잔", "컵", "물병", "수저", "젓가락", "나이프", "도마", "칼", "주걱", "국자", "뒤집개", "빨대", "일회용품", "쓰레기통", "분리수거", "비닐봉지", "장바구니", "보관함", "정리함", "옷장", "서랍장", "책장", "장식장", "신발장", "화장대", "전신거울", "옷걸이", "건조대", "다리미판", "세탁바구니", "수건걸이", "비누곽", "칫솔통", "욕조", "샤워기", "변기", "매트", "러그", "쿠션", "방석", "이불", "베개", "침대보", "커버", "잠옷", "속옷", "양말", "스타킹", "바지", "치마", "티셔츠", "셔츠", "블라우스", "스웨터", "가디건", "코트", "점퍼", "재킷", "원피스", "수트", "한복", "교복", "작업복", "운동복", "수영복", "비옷", "내의", "모자", "캡", "중절모", "비니", "벙거지", "머리띠", "핀", "고무줄", "리본", "목걸이", "귀걸이", "반지", "팔찌", "발찌", "시계", "브로치", "벨트", "넥타이", "스카프", "머플러", "장갑", "손수건", "안경", "선글라스", "콘택트렌즈", "돋보기", "지팡이", "유모차", "휠체어", "가방", "배낭", "숄더백", "클러치", "서류가방", "캐리어", "지갑", "동전지갑", "열쇠고리", "스마트폰", "태블릿", "노트북", "컴퓨터", "마우스", "키보드", "모니터", "프린터", "스캐너", "카메라", "캠코더", "이어폰", "헤드폰", "스피커", "마이크", "충전기", "보조배터리", "USB", "외장하드", "리모컨", "계산기", "시계", "알람", "타이머", "온도계", "습도계", "저울", "줄자", "나침반", "지도", "지구본", "돋보기", "망원경", "현미경", "시험관", "비커", "스포이트", "핀셋", "가위", "칼", "풀", "테이프", "스테이플러", "클립", "압정", "송곳", "드라이버", "망치", "펜치", "니퍼", "렌치", "사포", "붓", "물감", "팔레트", "캔버스", "이젤", "조각칼", "찰흙", "종이", "색종이", "도화지", "편지지", "봉투", "엽서", "카드", "수첩", "공책", "일기장", "달력", "잡지", "신문", "교과서", "참고서", "사전", "소설", "시집", "수필집", "만화책", "화보", "앨범", "악보", "지도책", "팜플렛", "전단지", "명함", "영수증", "티켓", "쿠폰", "상품권", "복권", "돈", "지폐", "동전", "카드", "통장", "도장"];
 
     let targetWords = [], currentRound = 1, roundScores = [], history = [];
-    let config = { count: 15, delay: 1200, vol: 0.7 };
+    let config = { count: 24, delay: 1200, vol: 0.7 };
     let synth = window.speechSynthesis;
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition, isRecording = false, waitInterval = null;
-    let selectedRecogWords = [], recognitionScore = 0;
+    let recognition, isRecording = false, waitInterval = null, wordCountSTT = 0;
 
-    function showScreen(id) { ["step-setup", "step-ready", "step-speak", "step-input", "step-wait", "step-recognition", "step-result"].forEach(s => document.getElementById(s).classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+    window.onload = () => { loadHistory(); };
+
+    function loadHistory() {
+        history = JSON.parse(localStorage.getItem('memoryTrainHistory') || "[]");
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('main-history-list');
+        list.innerHTML = history.length ? history.map(item => `
+            <div class="history-item">
+                <span>${item.date}</span>
+                <span><b>${item.scores.join('→')}</b> (최종:${item.final}/${item.total})</span>
+            </div>
+        `).join('') : '<div style="padding:15px; color:#999;">기록 없음</div>';
+    }
+
+    function updateVol(v) { config.vol = parseFloat(v); }
+
+    if (Recognition) {
+        recognition = new Recognition();
+        recognition.lang = 'ko-KR';
+        recognition.continuous = true;
+        recognition.onstart = () => {
+            document.getElementById('mic-text').innerText = "음성을 듣고 있습니다";
+            document.getElementById('stt-visualizer').classList.remove('hidden');
+        };
+        recognition.onresult = (e) => {
+            const res = e.results[e.results.length - 1][0].transcript;
+            document.getElementById('u-input').value += res + " ";
+            wordCountSTT = document.getElementById('u-input').value.trim().split(/\s+/).length;
+            // 텍스트는 보여주지 않고 카운트만 업데이트
+            document.getElementById('stt-visualizer').innerText = `● 현재 ${wordCountSTT}개 단어 인식됨`;
+        };
+        recognition.onend = () => {
+            if(isRecording) recognition.start();
+            else {
+                document.getElementById('mic-text').innerText = "음성 인식 시작";
+                document.getElementById('stt-visualizer').classList.add('hidden');
+            }
+        };
+    }
+
+    function toggleMic() {
+        if (!recognition) return alert("음성 인식을 지원하지 않는 브라우저입니다.");
+        isRecording = !isRecording;
+        if (isRecording) {
+            recognition.start();
+            document.getElementById('mic-btn').classList.add('recording');
+        } else {
+            recognition.stop();
+            document.getElementById('mic-btn').classList.remove('recording');
+        }
+    }
+
+    function showScreen(id) {
+        ["step-setup", "step-ready", "step-speak", "step-input", "step-wait", "step-result"].forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
 
     function pressStart() {
-        const unlock = new SpeechSynthesisUtterance(""); synth.speak(unlock);
+        synth.speak(new SpeechSynthesisUtterance(""));
         config.count = parseInt(document.getElementById('wCount').value);
         config.delay = parseInt(document.getElementById('dTime').value);
-        if(currentRound === 1) { 
-            targetWords = [...wordDB].sort(() => Math.random() - 0.5).slice(0, config.count); 
+
+        if(currentRound === 1) {
+            targetWords = [...wordDB].sort(() => Math.random() - 0.5).slice(0, config.count);
             roundScores = [];
         }
+
         showScreen('step-ready');
-        let c = 3; document.getElementById('countdown').innerText = c;
-        let t = setInterval(() => { c--; document.getElementById('countdown').innerText = c; if(c <= 0){ clearInterval(t); startTTS(); } }, 1000);
+        let c = 3;
+        const cd = document.getElementById('countdown');
+        cd.innerText = c;
+        const timer = setInterval(() => {
+            c--; cd.innerText = c;
+            if(c <= 0) { clearInterval(timer); startTTS(); }
+        }, 1000);
     }
 
     function startTTS() {
-        showScreen('step-speak'); let idx = 0; synth.cancel();
+        showScreen('step-speak');
+        let idx = 0;
         function speak() {
             if(idx < targetWords.length) {
                 document.getElementById('speak-idx').innerText = `${idx + 1} / ${targetWords.length}`;
                 const msg = new SpeechSynthesisUtterance(targetWords[idx]);
-                msg.lang = 'ko-KR'; msg.volume = config.vol;
+                msg.lang = 'ko-KR';
+                msg.volume = config.vol;
+                msg.rate = 0.95;
+                // 단어 간 간격을 1초(1000ms)로 연장
                 msg.onend = () => { idx++; setTimeout(speak, 1000); };
                 synth.speak(msg);
             } else { goToInputPhase(); }
@@ -135,96 +217,69 @@
     }
 
     function goToInputPhase() {
-        showScreen('step-input'); document.getElementById('u-input').value = "";
-        document.getElementById('input-title').innerText = currentRound <= 3 ? `제 ${currentRound} 라운드` : "최종 장기 기억 회상";
+        showScreen('step-input');
+        document.getElementById('u-input').value = "";
+        wordCountSTT = 0;
+        document.getElementById('stt-visualizer').innerText = "● 인식 중...";
+        document.getElementById('input-title').innerText = (currentRound <= 3) ? `${currentRound}회차 회상` : `최종 장기기억 테스트`;
     }
 
     function pressNext() {
-        const userWords = document.getElementById('u-input').value.split(/[\s,]+/).filter(w => w.trim().length > 0);
-        let s = 0; targetWords.forEach(tw => { if(userWords.includes(tw)) s++; });
+        isRecording = false;
+        if(recognition) recognition.stop();
+        document.getElementById('mic-btn').classList.remove('recording');
+
+        const input = document.getElementById('u-input').value;
+        const userWords = input.split(/[\s,.\n]+/).filter(w => w.length > 0);
+        let s = 0;
+        targetWords.forEach(tw => {
+            if(userWords.some(uw => uw.includes(tw) || tw.includes(uw))) s++;
+        });
+
         if (currentRound <= 3) {
             roundScores.push(s);
-            if (currentRound < 3) { currentRound++; pressStart(); } 
+            if (currentRound < 3) { currentRound++; pressStart(); }
             else { currentRound = 4; startWaitingMode(); }
-        } else {
-            recognitionScore = s; 
-            startRecognitionPhase();
-        }
-    }
-
-    function startRecognitionPhase() {
-        showScreen('step-recognition');
-        selectedRecogWords = [];
-        let distractors = wordDB.filter(w => !targetWords.includes(w)).sort(() => Math.random() - 0.5).slice(0, 24 - targetWords.length);
-        let pool = [...targetWords, ...distractors].sort(() => Math.random() - 0.5);
-        const poolEl = document.getElementById('word-pool');
-        poolEl.innerHTML = "";
-        pool.forEach(word => {
-            const tile = document.createElement('div');
-            tile.className = 'word-tile';
-            tile.innerText = word;
-            tile.onclick = () => {
-                tile.classList.toggle('selected');
-                if(tile.classList.contains('selected')) selectedRecogWords.push(word);
-                else selectedRecogWords = selectedRecogWords.filter(w => w !== word);
-            };
-            poolEl.appendChild(tile);
-        });
-    }
-
-    function submitRecognition() {
-        let correctPick = 0;
-        selectedRecogWords.forEach(w => { if(targetWords.includes(w)) correctPick++; });
-        finishTraining(recognitionScore, correctPick);
-    }
-
-    function finishTraining(longTermScore, recogScore) {
-        let sumHtml = "<strong>📊 훈련 데이터 요약</strong><br>";
-        roundScores.forEach((s, i) => { sumHtml += `${i+1}회차: ${s} / ${targetWords.length}<br>`; });
-        sumHtml += `<br><span style="color:#228be6;">장기 기억 회상: ${longTermScore} / ${targetWords.length}</span><br>`;
-        sumHtml += `<span style="color:#40c057;">단어 고르기: ${recogScore} / ${targetWords.length}</span>`;
-        let ansHtml = "<strong>🎯 이번 훈련 정답 단어들</strong><br>";
-        targetWords.forEach(tw => { ansHtml += `<span>${tw}</span> `; });
-        showScreen('step-result');
-        document.getElementById('round-scores').innerHTML = sumHtml;
-        document.getElementById('answer-list').innerHTML = ansHtml;
-        const now = new Date();
-        const record = { date: `${now.getMonth()+1}/${now.getDate()}`, scores: [...roundScores], final: longTermScore, total: targetWords.length };
-        history.unshift(record);
-        localStorage.setItem('memoryTrainHistory', JSON.stringify(history.slice(0, 50)));
-        renderHistoryList();
+        } else { finishTraining(s); }
     }
 
     function startWaitingMode() {
         showScreen('step-wait');
         let tl = config.delay;
-        waitInterval = setInterval(() => {
+        const update = () => {
             let m = Math.floor(tl / 60), s = tl % 60;
-            document.getElementById('wait-timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            document.getElementById('wait-timer').innerText = `${m}:${s.toString().padStart(2,'0')}`;
             if(tl <= 0) { clearInterval(waitInterval); goToInputPhase(); }
             tl--;
-        }, 1000);
+        };
+        update();
+        waitInterval = setInterval(update, 1000);
     }
-    function skipWait() { clearInterval(waitInterval); goToInputPhase(); }
-    function updateVol(v) { config.vol = parseFloat(v); }
-    function renderHistoryList() {
-        const listEl = document.getElementById('main-history-list');
-        if(history.length === 0) { listEl.innerHTML = "<div style='padding:10px; color:#999;'>기록 없음</div>"; return; }
-        listEl.innerHTML = history.map(h => `<div class="history-item"><div>${h.date}</div><div>${h.scores.join('→')} (최종:${h.final})</div></div>`).join('');
-    }
-    window.onload = () => { history = JSON.parse(localStorage.getItem('memoryTrainHistory') || "[]"); renderHistoryList(); };
 
-    if (Recognition) {
-        recognition = new Recognition(); recognition.lang = 'ko-KR'; recognition.continuous = true;
-        recognition.onresult = (e) => { document.getElementById('u-input').value += e.results[e.results.length - 1][0].transcript + " "; };
-        recognition.onend = () => { if(isRecording) recognition.start(); };
-    }
-    function toggleMic() {
-        if (!recognition) return alert("지원불가 브라우저");
-        isRecording = !isRecording;
-        const btn = document.getElementById('mic-btn');
-        if (isRecording) { recognition.start(); btn.classList.add('recording'); btn.innerText = "🎙️ 듣고 있습니다..."; } 
-        else { recognition.stop(); btn.classList.remove('recording'); btn.innerText = "🎤 음성 인식 시작"; }
+    function skipWait() { clearInterval(waitInterval); goToInputPhase(); }
+
+    function finishTraining(finalScore) {
+        const now = new Date();
+        const dateStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+        history.unshift({ date: dateStr, scores: [...roundScores], final: finalScore, total: targetWords.length });
+        if(history.length > 30) history.pop();
+        localStorage.setItem('memoryTrainHistory', JSON.stringify(history));
+
+        let sumHtml = `<strong>📊 결과 (${targetWords.length}단어 모드)</strong><br>`;
+        roundScores.forEach((s, i) => { sumHtml += `${i+1}회: ${s}개 / `; });
+        sumHtml += `<span style="color:#2b8a3e; font-weight:bold;">최종: ${finalScore}개</span>`;
+
+        let ansHtml = "<strong>✅ 정답 대조 (최종 결과에서만 공개)</strong><br>";
+        const lastInput = document.getElementById('u-input').value;
+        targetWords.forEach(tw => {
+            if(lastInput.includes(tw)) ansHtml += `<span style="color:green; font-weight:bold;">✔${tw}</span> `;
+            else ansHtml += `<span style="color:#e03131; text-decoration:line-through; opacity:0.5;">✘${tw}</span> `;
+        });
+
+        showScreen('step-result');
+        document.getElementById('round-scores').innerHTML = sumHtml;
+        document.getElementById('answer-list').innerHTML = ansHtml;
+        renderHistory();
     }
 </script>
 </body>
