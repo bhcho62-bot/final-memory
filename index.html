@@ -3,57 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>암기력 훈련 v7.0 (종합 대시보드 탑재)</title>
+    <title>암기력 훈련 v6.4 (전체 기기 호환)</title>
     <style>
         body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
         #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; }
         .hidden { display: none !important; }
         .panel { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; }
         #countdown { font-size: 8rem; color: #228be6; font-weight: bold; margin: 30px 0; }
-        button { width: 100%; padding: 18px; font-size: 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: #228be6; color: white; transition: 0.2s; }
-        button:active { opacity: 0.8; }
-        .btn-mic { background: #f03e3e; min-height: 120px; width: 100%; margin-bottom: 15px; border-radius: 15px; position: relative; color: white; }
+        button { width: 100%; padding: 18px; font-size: 1.1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: #228be6; color: white; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        .btn-mic { background: #f03e3e; min-height: 120px; width: 100%; margin-bottom: 15px; border-radius: 15px; position: relative; }
         .btn-mic.recording { background: #ff922b; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         #security-box { width: 100%; height: 60px; margin-top: 10px; background: #e9ecef; border: 2px dashed #ced4da; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #495057; font-weight: bold; font-size: 0.9rem; }
         .recog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
-        .recog-item { padding: 15px 5px; background: #fff; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .recog-item { padding: 15px 5px; background: #fff; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.9rem; unselectable: none; -webkit-user-select: none; user-select: none; }
         .recog-item.selected { background: #e7f5ff; border-color: #228be6; color: #228be6; }
         .ans-check { display: inline-block; margin: 5px; padding: 5px 12px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; }
         .hit { background: #e6ffed; color: #22863a; border-color: #34d058; }
         .miss { background: #ffeef0; color: #cb2431; border-color: #f97583; }
         
-        /* 대시보드 전용 스타일 */
-        .db-title { font-size: 1.1rem; font-weight: bold; margin-top: 10px; color: #333; }
-        .db-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0; }
-        .db-card { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #e9ecef; text-align: center; }
-        .db-card p { margin: 5px 0 0 0; font-size: 1.4rem; font-weight: bold; color: #228be6; }
-        .history-list { max-height: 150px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; }
-        .history-item { border-bottom: 1px solid #e9ecef; padding: 4px 0; display: flex; justify-content: space-between; }
-        .stt-preview { background: #e9ecef; padding: 10px; border-radius: 8px; margin-top: 10px; min-height: 40px; text-align: left; font-size: 0.9rem; color: #495057; }
+        /* 기록 전용 스타일 */
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; text-align: center; }
+        .history-table th, .history-table td { padding: 8px 4px; border-bottom: 1px solid #dee2e6; }
+        .history-table th { background: #e9ecef; color: #495057; }
+        .history-container { max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #dee2e6; border-radius: 5px; padding: 5px; }
     </style>
 </head>
-<body>
+<body onload="loadTestHistory()">
 
-<div id="app" onclick="activateAudio()">
+<div id="app">
     <div id="step-setup">
-        <h2>🧠 암기력 훈련 v7.0</h2>
-        <p style="font-size:0.8rem; color:#888;">모바일은 화면을 한 번 터치 후 시작하세요.</p>
-        
-        <div class="panel" id="dashboard-panel">
-            <div class="db-title">📊 최근 20회 누적 리포트</div>
-            <div class="db-grid">
-                <div class="db-card">최근 지연회상 평균<p id="stat-avg-delayed">0개</p></div>
-                <div class="db-card">기억 판정 결과<p id="stat-pattern" style="font-size:1rem; color:#f03e3e; margin-top:8px;">데이터 부족</p></div>
-            </div>
-            <div class="db-title" style="font-size:0.9rem; color:#666;">📜 최근 훈련 기록 (최대 5개 표시)</div>
-            <div id="history-container" class="history-list">
-                <div style="color:#aaa; text-align:center; padding:10px;">저장된 기록이 없습니다.</div>
-            </div>
-            <button onclick="clearHistory()" style="background:#e03131; padding:5px 10px; font-size:0.8rem; width:auto; margin-top:8px; border-radius:5px; float:right;">기록 초기화</button>
-            <div style="clear:both;"></div>
-        </div>
-
+        <h2>🧠 암기력 훈련 v6.4</h2>
+        <p style="font-size:0.8rem; color:#888;">휴대폰과 노트북 어디서나 훈련이 가능합니다.</p>
         <div class="panel">
             <label>🎯 단어 수</label>
             <select id="wCount" style="width:100%; padding:12px; margin:10px 0;">
@@ -67,345 +48,337 @@
                 <option value="1200" selected>20분 (표준)</option>
             </select>
         </div>
-        <button onclick="pressStart()">훈련 시작</button>
+        <button onclick="pressStart()" style="margin-bottom: 25px;">훈련 시작</button>
+
+        <div class="panel">
+            <h4>📜 최근 훈련 기록 (최대 30회)</h4>
+            <div class="history-container">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>일시</th>
+                            <th>총수</th>
+                            <th>즉시</th>
+                            <th>지연</th>
+                            <th>재인</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-rows"></tbody>
+                </table>
+            </div>
+            <button onclick="clearHistory()" style="background:#e03131; padding:6px 10px; font-size:0.8rem; margin-top:10px; width:auto; border-radius:5px; float:right;">기록 초기화</button>
+            <div style="clear:both;"></div>
+        </div>
     </div>
 
-    <div id="step-ready" class="hidden">
-        <div id="countdown">3</div>
-    </div>
+    <div id="step-ready" class="hidden"><div id="countdown">3</div></div>
 
     <div id="step-speak" class="hidden">
         <h2 id="speak-idx" style="color:#e03131;">1 / 12</h2>
         <div style="font-size: 5rem; margin: 20px;">📢</div>
-        <p id="speak-word" style="font-size: 2rem; font-weight: bold; margin: 10px 0;"></p>
         <p>단어를 잘 듣고 암기하세요.</p>
-    </div>
-
-    <div id="step-delay" class="hidden">
-        <h2>⏳ 지연 회상 대기 중...</h2>
-        <p>설정한 시간 동안 다른 활동을 하다가 돌아오세요.</p>
-        <div id="delay-timer" style="font-size: 3rem; font-weight: bold; color: #f03e3e; margin: 20px 0;">00:00</div>
-        <button onclick="skipDelay()" style="background: #868e96;">즉시 테스트하기 (건너뛰기)</button>
     </div>
 
     <div id="step-input" class="hidden">
         <h3 id="input-title">회상 단계</h3>
-        <p>기억나는 단어들을 말씀하세요.</p>
         <button id="mic-btn" class="btn-mic" onclick="toggleMicManually()">
             <span id="mic-text" style="font-size:1.2rem;">🎤 음성 인식 시작</span>
-            <div id="stt-count" style="font-size:1rem; margin-top:10px;">인식된 단어: 0개</div>
+            <div id="stt-count" style="font-size:1rem; margin-top:10px; font-weight: bold; color: yellow;"></div>
         </button>
-        <div class="stt-preview" id="stt-preview">실시간 인식 결과가 여기에 표시됩니다...</div>
-        <div id="security-box">실시간 음성 데이터 분석 보안 적용됨</div>
-        <button onclick="finishRecall()" style="background: #228be6; margin-top: 15px;">제출 및 결과 보기</button>
+        <div id="security-box">🔒 보안: 입력 단어 비표시 모드</div>
+        <button style="background:#40c057; width:100%; margin-top:15px;" onclick="pressNext()">모두 말했습니다 (완료)</button>
+    </div>
+
+    <div id="step-wait" class="hidden">
+        <p>기억 고정 대기 중...</p>
+        <div id="wait-timer" style="font-size: 4rem; font-weight: bold; color: #228be6;">00:00</div>
+        <button onclick="skipWait()" style="background:#868e96; width:100%;">건너뛰기</button>
+    </div>
+
+    <div id="step-recog" class="hidden">
+        <h3>✅ 재인 검사</h3>
+        <p>학습한 단어를 모두 선택하세요. (총 24단어)</p>
+        <div id="recog-grid" class="recog-grid"></div>
+        <button style="margin-top:20px; width:100%; background:#40c057;" onclick="finishTraining()">결과 확인</button>
     </div>
 
     <div id="step-result" class="hidden">
-        <h2>🎉 훈련 결과 리포트</h2>
+        <h2>📊 분석 결과</h2>
+        <div id="round-scores" class="panel" style="line-height:2; font-size:1.1rem;"></div>
         <div class="panel">
-            <h3>정답 분석</h3>
-            <div id="result-check-container"></div>
+            <h4>✅ 정답 대조표</h4>
+            <div id="answer-grid" style="text-align: left;"></div>
         </div>
-        <div class="panel">
-            <p><strong>총 단어 수:</strong> <span id="res-total">0</span>개</p>
-            <p><strong>맞춘 단어 수:</strong> <span id="res-hit">0</span>개</p>
-            <p><strong>정답률:</strong> <span id="res-rate">0</span>%</p>
-        </div>
-        <button onclick="goToMain()" style="background: #495057;">메인 화면으로</button>
+        <button onclick="location.reload()" style="width:100%;">처음으로</button>
     </div>
 </div>
 
 <script>
-    // --- 데이터 및 전역 변수 설정 ---
-    const WORD_POOL = ["사과", "바나나", "자동차", "비행기", "컴퓨터", "책상", "의자", "호랑이", "사자", "스마트폰", "우주선", "시계", "수박", "포도", "연필", "공책", "지우개", "자전거", "고양이", "강아지"];
-    let targetWords = [];
-    let recognizedWords = new Set();
-    let currentStep = "setup";
-    let audioActivated = false;
-    let delayTimerInterval = null;
-    let recognition = null;
-    let isRecording = false;
+    const wordDB = ["사과", "바나나", "자동차", "비행기", "컴퓨터", "책상", "의자", "호랑이", "사자", "스마트폰", 
+        "우주선", "시계", "수박", "포도", "연필", "공책", "지우개", "자전거", "고양이", "강아지",
+        "나무", "하늘", "바다", "구름", "태양", "달빛", "별빛", "지구", "화성", "목성",
+        "안경", "모자", "신발", "양말", "바지", "셔츠", "가방", "지갑", "우산", "장갑",
+        "냄비", "숟가락", "젓가락", "접시", "냉장고", "세탁기", "에어컨", "티비", "침대", "소파",
+        "학교", "병원", "은행", "약국", "공원", "시장", "서점", "극장", "카페", "식당",
+        "축구", "야구", "농구", "배구", "수영", "테니스", "골프", "스키", "등산", "낚시",
+        "피아노", "기타", "드럼", "노래", "그림", "사진", "영화", "소설", "시집", "잡지",
+        "서울", "부산", "제주", "도쿄", "파리", "런던", "뉴욕", "시드니", "로마", "이집트",
+        "의사", "교사", "경찰", "소방관", "군인", "요리사", "가수", "배우", "작가", "화가",
+        "여우", "늑대", "토끼", "다람쥐", "곰돌이", "사슴", "코끼리", "기린", "얼룩말", "하마",
+        "독수리", "참새", "비둘기", "까마귀", "제비", "올빼미", "펭귄", "타조", "갈매기", "백로",
+        "고래", "상어", "문어", "오징어", "거북이", "게잡이", "조개", "해파리", "물개", "연어",
+        "장미", "일개미", "해바라기", "튤립", "백합", "무궁화", "코스모스", "국화", "매화", "벚꽃",
+        "소나무", "대나무", "단풍나무", "은행나무", "버드나무", "선인장", "잔디", "이끼", "연꽃", "클로버",
+        "김치", "비빔밥", "불고기", "삼겹살", "치킨", "피자", "파스타", "햄버거", "라면", "떡볶이",
+        "커피", "녹차", "우유", "주스", "콜라", "사이다", "맥주", "와인", "막걸리", "생수",
+        "봄날", "여름", "가을", "겨울", "눈사람", "비바람", "무지개", "번개", "안개", "태풍",
+        "기쁨", "슬픔", "분노", "행복", "사랑", "평화", "희망", "용기", "친절", "정직",
+        "금메달", "은반지", "동전", "보석", "다이아", "진주", "크리스탈", "유리창", "거울", "열쇠",
+        "가위", "풀칠", "테이프", "망치", "드라이버", "송곳", "사다리", "빗자루", "걸레", "휴지통",
+        "지하철", "버스", "택시", "기차", "오토바이", "헬기", "트럭", "자전거", "킥보드", "케이블카",
+        "노트북", "마우스", "키보드", "모니터", "프린터", "이어폰", "스피커", "충전기", "배터리", "카메라",
+        "축구공", "야구배트", "글러브", "탁구채", "셔틀콕", "수영모", "스케이트", "헬멧", "보호대", "아령",
+        "도서관", "박물관", "미술관", "과학관", "체육관", "수영장", "놀이공원", "동물원", "식물원", "아쿠아리움",
+        "수학", "과학", "역사", "음악", "미술", "체육", "국어", "영어", "코딩", "철학",
+        "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일", "달력", "시계바늘", "모래시계",
+        "소금", "설탕", "간장", "고추장", "된장", "식초", "후추", "참기름", "꿀물", "시럽",
+        "사과나무", "포도밭", "딸기", "오렌지", "레몬", "라임", "망고", "파인애플", "멜론", "복숭아",
+        "토마토", "오이", "당근", "감자", "고구마", "양파", "마늘", "고추", "배추", "무말랭이"];
 
-    // --- 초기화 및 대시보드 로드 ---
-    window.onload = function() {
-        loadDashboard();
-        initSTT();
-    };
+    let targetWords = [], currentRound = 1, roundScores = [], delayedScore = 0;
+    let recogWords = [], selectedRecog = [], isAudioActive = false;
+    let recognition, isRecording = false, waitTimer;
+    let hiddenInputText = ""; 
 
+    // 브라우저 오디오 엔진 강제 웨이크업 함수 (모바일 핵심)
     function activateAudio() {
-        if (!audioActivated) {
-            // 모바일 브라우저 오디오 제한 해제용 트릭
-            const lecture = new SpeechSynthesisUtterance("");
-            window.speechSynthesis.speak(lecture);
-            audioActivated = true;
+        if (!isAudioActive) {
+            const u = new SpeechSynthesisUtterance("");
+            window.speechSynthesis.speak(u);
+            isAudioActive = true;
         }
     }
 
-    // --- 화면 전환 함수 ---
-    function showStep(stepId) {
-        document.getElementById("step-setup").classList.add("hidden");
-        document.getElementById("step-ready").classList.add("hidden");
-        document.getElementById("step-speak").classList.add("hidden");
-        document.getElementById("step-delay").classList.add("hidden");
-        document.getElementById("step-input").classList.add("hidden");
-        document.getElementById("step-result").classList.add("hidden");
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+        recognition = new SpeechRec();
+        recognition.lang = 'ko-KR';
+        recognition.continuous = true;
+        recognition.interimResults = false;
 
-        document.getElementById(`step-${stepId}`).classList.remove("hidden");
-        currentStep = stepId;
+        recognition.onresult = (e) => {
+            const res = e.results[e.results.length - 1][0].transcript;
+            hiddenInputText += res + " ";
+            updateCountDisplay();
+        };
+
+        recognition.onend = () => {
+            if (isRecording) {
+                try { recognition.start(); } catch(err) { console.log(err); }
+            }
+        };
+
+        recognition.onerror = (e) => {
+            console.error("STT Error:", e.error);
+        };
     }
 
-    // --- 훈련 시작 프로세스 ---
+    function updateCountDisplay() {
+        const words = hiddenInputText.trim().split(/\s+/).filter(w => w.length > 0);
+        document.getElementById('stt-count').innerText = `● 현재 ${words.length}개 단어 인식됨`;
+    }
+
+    function showScreen(id) {
+        ["step-setup", "step-ready", "step-speak", "step-input", "step-wait", "step-recog", "step-result"].forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
     function pressStart() {
-        const count = parseInt(document.getElementById("wCount").value);
-        // 단어 무작위 셔플 후 선택
-        targetWords = [...WORD_POOL].sort(() => 0.5 - Math.random()).slice(0, count);
-        recognizedWords.clear();
-
-        showStep("ready");
-        let countNum = 3;
-        const cdDiv = document.getElementById("countdown");
-        cdDiv.innerText = countNum;
-
-        const interval = setInterval(() => {
-            countNum--;
-            if (countNum <= 0) {
-                clearInterval(interval);
-                startTTS();
+        activateAudio(); // 사용자가 버튼을 누르는 순간 오디오 인프라 활성화
+        if(currentRound === 1) {
+            const count = parseInt(document.getElementById('wCount').value);
+            targetWords = [...wordDB].sort(() => Math.random() - 0.5).slice(0, count);
+            roundScores = [];
+        }
+        showScreen('step-ready');
+        let c = 3;
+        document.getElementById('countdown').innerText = c;
+        const timer = setInterval(() => {
+            c--;
+            if(c <= 0) { 
+                clearInterval(timer); 
+                startTTS(); 
             } else {
-                cdDiv.innerText = countNum;
+                document.getElementById('countdown').innerText = c;
             }
         }, 1000);
     }
 
-    // --- TTS 단어 출력 단계 ---
     function startTTS() {
-        showStep("speak");
+        showScreen('step-speak');
         let idx = 0;
-
-        function speakNext() {
-            if (idx >= targetWords.length) {
-                startDelayPeriod();
-                return;
-            }
-            const word = targetWords[idx];
-            document.getElementById("speak-idx").innerText = `${idx + 1} / ${targetWords.length}`;
-            document.getElementById("speak-word").innerText = word;
-
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'ko-KR';
-            utterance.rate = 0.8; // 조금 천천히 읽기
-
-            utterance.onend = () => {
-                setTimeout(() => {
+        function speak() {
+            if(idx < targetWords.length) {
+                document.getElementById('speak-idx').innerText = `${idx + 1} / ${targetWords.length}`;
+                const msg = new SpeechSynthesisUtterance(targetWords[idx]);
+                msg.lang = 'ko-KR';
+                msg.rate = 0.9; // 약간 여유 있게 발음 (모바일 스피커 버벅임 방지)
+                msg.onend = () => { 
+                    idx++; 
+                    setTimeout(speak, 1000); 
+                };
+                msg.onerror = () => { // 에러나면 건너뛰고 다음 단어 진행 유도
                     idx++;
-                    speakNext();
-                }, 1000); // 단어 사이 1초 공백
-            };
-            window.speechSynthesis.speak(utterance);
-        }
-        speakNext();
-    }
-
-    // --- 지연 대기 단계 ---
-    function startDelayPeriod() {
-        showStep("delay");
-        let timeLeft = parseInt(document.getElementById("dTime").value);
-        updateDelayTimerDisplay(timeLeft);
-
-        delayTimerInterval = setInterval(() => {
-            timeLeft--;
-            updateDelayTimerDisplay(timeLeft);
-            if (timeLeft <= 0) {
-                clearInterval(delayTimerInterval);
-                startRecallStage();
+                    setTimeout(speak, 500);
+                };
+                window.speechSynthesis.speak(msg);
+            } else { 
+                showScreen('step-input'); 
+                hiddenInputText = ""; 
+                updateCountDisplay();
             }
-        }, 1000);
-    }
-
-    function updateDelayTimerDisplay(secs) {
-        const m = Math.floor(secs / 60).toString().padStart(2, '0');
-        const s = (secs % 60).toString().padStart(2, '0');
-        document.getElementById("delay-timer").innerText = `${m}:${s}`;
-    }
-
-    function skipDelay() {
-        if (delayTimerInterval) clearInterval(delayTimerInterval);
-        startRecallStage();
-    }
-
-    // --- 회상 (STT) 입력 단계 ---
-    function startRecallStage() {
-        showStep("input");
-        document.getElementById("stt-count").innerText = "인식된 단어: 0개";
-        document.getElementById("stt-preview").innerText = "마이크 버튼을 누르고 단어들을 말씀하세요.";
-    }
-
-    function initSTT() {
-        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (window.SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'ko-KR';
-
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        const speechResult = event.results[i][0].transcript.trim();
-                        // 공백 기준으로 단어 쪼개기
-                        const tokens = speechResult.split(/\s+/);
-                        tokens.forEach(token => {
-                            if(token.length > 1) { // 2글자 이상 단어만 필터링 저장
-                                recognizedWords.add(token);
-                            }
-                        });
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-                document.getElementById("stt-preview").innerText = interimTranscript || Array.from(recognizedWords).join(", ");
-                document.getElementById("stt-count").innerText = `인식된 단어: ${recognizedWords.size}개`;
-            };
-
-            recognition.onend = () => {
-                if (isRecording) recognition.start(); // 예기치 않게 끊겨도 녹음 유지
-            };
-        } else {
-            alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 혹은 최신 모바일 브라우저를 이용해 주세요.");
         }
+        speak();
     }
 
     function toggleMicManually() {
-        if (!recognition) return;
-        const btn = document.getElementById("mic-btn");
-        const txt = document.getElementById("mic-text");
-
-        if (!isRecording) {
-            recognition.start();
+        if(!recognition) return alert("이 브라우저나 기기는 음성 인식을 지원하지 않습니다. (Chrome 추천)");
+        
+        activateAudio();
+        if(!isRecording) {
             isRecording = true;
-            btn.classList.add("recording");
-            txt.innerText = "🛑 음성 인식 중... (터치 시 중지)";
+            try {
+                recognition.start();
+                document.getElementById('mic-btn').classList.add('recording');
+                document.getElementById('mic-text').innerText = "듣고 있습니다... (연속 입력 가능)";
+            } catch(e) {
+                isRecording = false;
+                alert("마이크 연결에 실패했습니다. 권한을 확인해주세요.");
+            }
         } else {
-            recognition.stop();
             isRecording = false;
-            btn.classList.remove("recording");
-            txt.innerText = "🎤 음성 인식 시작";
+            recognition.stop();
+            document.getElementById('mic-btn').classList.remove('recording');
+            document.getElementById('mic-text').innerText = "🎤 음성 인식 시작";
         }
     }
 
-    // --- 결과 분석 및 저장 단계 ---
-    function finishRecall() {
-        if (isRecording) toggleMicManually();
-        showStep("result");
+    function pressNext() {
+        isRecording = false; 
+        if(recognition) recognition.stop();
+        document.getElementById('mic-btn').classList.remove('recording');
+        document.getElementById('mic-text').innerText = "🎤 음성 인식 시작";
 
-        const container = document.getElementById("result-check-container");
-        container.innerHTML = "";
+        let s = 0;
+        targetWords.forEach(w => { if(hiddenInputText.includes(w)) s++; });
 
-        let hitCount = 0;
-        
-        targetWords.forEach(word => {
-            const span = document.createElement("span");
-            span.classList.add("ans-check");
-            
-            // 사용자가 말한 단어 중 정답 단어가 포함되어 있는지 검사
-            let isHit = false;
-            recognizedWords.forEach(recWord => {
-                if(recWord.includes(word) || word.includes(recWord)) isHit = true;
-            });
-
-            if (isHit) {
-                span.classList.add("hit");
-                span.innerText = `✓ ${word}`;
-                hitCount++;
-            } else {
-                span.classList.add("miss");
-                span.innerText = `✗ ${word}`;
-            }
-            container.appendChild(span);
-        });
-
-        const rate = targetWords.length > 0 ? Math.round((hitCount / targetWords.length) * 100) : 0;
-        
-        document.getElementById("res-total").innerText = targetWords.length;
-        document.getElementById("res-hit").innerText = hitCount;
-        document.getElementById("res-rate").innerText = rate;
-
-        saveRecord(hitCount, targetWords.length);
+        if(currentRound <= 3) {
+            roundScores.push(s);
+            if(currentRound < 3) { currentRound++; pressStart(); }
+            else { currentRound = 4; startWait(); }
+        } else {
+            delayedScore = s;
+            startRecogPhase();
+        }
     }
 
-    // --- 로컬스토리지 기반 대시보드 데이터 처리 ---
-    function saveRecord(hit, total) {
-        let history = JSON.parse(localStorage.getItem("memory_history")) || [];
+    function startWait() {
+        showScreen('step-wait');
+        let t = parseInt(document.getElementById('dTime').value);
+        document.getElementById('wait-timer').innerText = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`;
+        waitTimer = setInterval(() => {
+            t--;
+            document.getElementById('wait-timer').innerText = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`;
+            if(t <= 0) { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; updateCountDisplay(); }
+        }, 1000);
+    }
+
+    function skipWait() { clearInterval(waitTimer); showScreen('step-input'); hiddenInputText = ""; updateCountDisplay(); }
+
+    function startRecogPhase() {
+        showScreen('step-recog');
+        selectedRecog = [];
+        const others = wordDB.filter(w => !targetWords.includes(w)).sort(() => Math.random() - 0.5).slice(0, 24 - targetWords.length);
+        recogWords = [...targetWords, ...others].sort(() => Math.random() - 0.5);
+        const grid = document.getElementById('recog-grid');
+        grid.innerHTML = recogWords.map((w, i) => `<div class="recog-item" id="rec-${i}" onclick="toggleRec(${i})">${w}</div>`).join('');
+    }
+
+    function toggleRec(i) {
+        const w = recogWords[i];
+        const el = document.getElementById(`rec-${i}`);
+        if(selectedRecog.includes(w)) {
+            selectedRecog = selectedRecog.filter(x => x !== w);
+            el.classList.remove('selected');
+        } else {
+            selectedRecog.push(w);
+            el.classList.add('selected');
+        }
+    }
+
+    function finishTraining() {
+        let rScore = 0;
+        selectedRecog.forEach(w => { if(targetWords.includes(w)) rScore++; });
+        showScreen('step-result');
+        document.getElementById('round-scores').innerHTML = `
+            즉시 회상 (1~3회차): ${roundScores.join(' → ')} <br>
+            지연 회상 점수: <b>${delayedScore}개</b> <br>
+            재인 검사 점수: <b>${rScore} / ${targetWords.length}</b>
+        `;
+        document.getElementById('answer-grid').innerHTML = targetWords.map(w => {
+            const isHit = selectedRecog.includes(w);
+            return `<div class="ans-check ${isHit ? 'hit' : 'miss'}">${isHit ? '✔' : '✘'} ${w}</div>`;
+        }).join('');
+
+        saveTestRecord(targetWords.length, roundScores.join('→'), delayedScore, rScore);
+    }
+
+    /* --- 기록 시스템 관리 함수 --- */
+    function saveTestRecord(total, immediate, delayed, recognitionScore) {
+        let history = JSON.parse(localStorage.getItem('memory_train_history')) || [];
+        
+        const now = new Date();
+        const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
         const newRecord = {
-            date: new Date().toLocaleDateString('ko-KR', {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'}),
-            hit: hit,
-            total: total
+            date: dateStr,
+            total: total,
+            immediate: immediate,
+            delayed: delayed,
+            recog: recognitionScore
         };
-        history.unshift(newRecord); // 가장 앞에 추가
-        if (history.length > 20) history.pop(); // 최대 20개 유지
         
-        localStorage.setItem("memory_history", JSON.stringify(history));
+        history.unshift(newRecord);
+        if(history.length > 30) history = history.slice(0, 30);
+        
+        localStorage.setItem('memory_train_history', JSON.stringify(history));
     }
 
-    function loadDashboard() {
-        const history = JSON.parse(localStorage.getItem("memory_history")) || [];
-        const avgDiv = document.getElementById("stat-avg-delayed");
-        const patternDiv = document.getElementById("stat-pattern");
-        const hContainer = document.getElementById("history-container");
-
-        if (history.length === 0) {
-            avgDiv.innerText = "0개";
-            patternDiv.innerText = "데이터 부족";
-            hContainer.innerHTML = '<div style="color:#aaa; text-align:center; padding:10px;">저장된 기록이 없습니다.</div>';
+    function loadTestHistory() {
+        const history = JSON.parse(localStorage.getItem('memory_train_history')) || [];
+        const tbody = document.getElementById('history-rows');
+        
+        if(history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color:#999; padding:20px 0;">저장된 훈련 기록이 없습니다.</td></tr>`;
             return;
         }
-
-        // 통계 계산
-        let sumHits = 0;
-        history.forEach(item => sumHits += item.hit);
-        const avg = (sumHits / history.length).toFixed(1);
-        avgDiv.innerText = `${avg}개`;
-
-        // 간단 정답률 기반 기억 판정 패턴 매칭
-        let totalWordsSum = 0;
-        history.forEach(item => totalWordsSum += item.total);
-        const overallRate = (sumHits / totalWordsSum) * 100;
-
-        if (history.length < 3) {
-            patternDiv.innerText = "데이터 부족";
-            patternDiv.style.color = "#868e96";
-        } else if (overallRate >= 80) {
-            patternDiv.innerText = "최상 (기억력 우수)";
-            patternDiv.style.color = "#2b8a3e";
-        } else if (overallRate >= 50) {
-            patternDiv.innerText = "정상 (안정적 흐름)";
-            patternDiv.style.color = "#228be6";
-        } else {
-            patternDiv.innerText = "집중 요망";
-            patternDiv.style.color = "#f03e3e";
-        }
-
-        // 최근 기록 리스트 렌더링 (최대 5개)
-        hContainer.innerHTML = "";
-        history.slice(0, 5).forEach(item => {
-            const row = document.createElement("div");
-            row.className = "history-item";
-            row.innerHTML = `<span>📅 ${item.date}</span> <strong>${item.hit} / ${item.total}개 (${Math.round(item.hit/item.total*100)}%)</strong>`;
-            hContainer.appendChild(row);
-        });
+        
+        tbody.innerHTML = history.map(item => `
+            <tr>
+                <td style="color:#666;">${item.date}</td>
+                <td><b>${item.total}개</b></td>
+                <td>${item.immediate}</td>
+                <td style="color:#228be6; font-weight:bold;">${item.delayed}개</td>
+                <td style="color:#40c057; font-weight:bold;">${item.recog}개</td>
+            </tr>
+        `).join('');
     }
 
     function clearHistory() {
-        if(confirm("모든 훈련 데이터를 기록 초기화하시겠습니까?")) {
-            localStorage.removeItem("memory_history");
-            loadDashboard();
+        if(confirm("정말로 모든 기록을 삭제하시겠습니까?")) {
+            localStorage.removeItem('memory_train_history');
+            loadTestHistory();
         }
-    }
-
-    function goToMain() {
-        loadDashboard();
-        showStep("setup");
     }
 </script>
 </body>
