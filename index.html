@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>암기력 훈련 v7.0 (재인 간격 조정판)</title>
+    <title>암기력 훈련 v7.2 (상세 기록 조회 기능 추가)</title>
     <style>
         body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; }
+        #app { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; position: relative; }
         .hidden { display: none !important; }
         .panel { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; }
         #countdown { font-size: 8rem; color: #228be6; font-weight: bold; margin: 30px 0; }
@@ -20,9 +20,9 @@
         .ox-container { display: flex; gap: 20px; margin-top: 30px; }
         .btn-o { background: #40c057; font-size: 2.5rem; padding: 25px 0; }
         .btn-x { background: #fa5252; font-size: 2.5rem; padding: 25px 0; }
-        .btn-o:disabled, .btn-x:disabled { background: #ced4da; cursor: not-down; }
+        .btn-o:disabled, .btn-x:disabled { background: #ced4da; cursor: not-allowed; }
         
-        .ans-check { display: inline-block; margin: 5px; padding: 5px 12px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; }
+        .ans-check { display: inline-block; margin: 4px; padding: 4px 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; font-size: 0.85rem; }
         .hit { background: #e6ffed; color: #22863a; border-color: #34d058; }
         .miss { background: #ffeef0; color: #cb2431; border-color: #f97583; }
         
@@ -30,6 +30,10 @@
         .history-table th, .history-table td { padding: 8px 4px; border-bottom: 1px solid #dee2e6; }
         .history-table th { background: #e9ecef; color: #495057; }
         .history-container { max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #dee2e6; border-radius: 5px; padding: 5px; }
+
+        /* 팝업 모달 스타일 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); text-align: left; }
     </style>
 </head>
 <body>
@@ -37,14 +41,14 @@
 <div id="app">
     <!-- 0단계: 설정 화면 -->
     <div id="step-setup">
-        <h2>🧠 암기력 훈련 v7.0</h2>
-        <p style="font-size:0.8rem; color:#888;">재인 검사 시 버튼을 누른 후 자연스러운 간격(0.6초)이 추가되었습니다.</p>
+        <h2>🧠 암기력 훈련 v7.2</h2>
+        <p style="font-size:0.8rem; color:#888;">훈련 기록 옆 [결과] 버튼을 눌러 지난 상세 분석을 볼 수 있습니다.</p>
         <div class="panel">
             <label>🎯 단어 수</label>
             <select id="wCount" style="width:100%; padding:12px; margin:10px 0;">
                 <option value="5">입문 (5개)</option>
-                <option value="12" selected>보통 (12개)</option>
-                <option value="15">집중 (15개)</option>
+                <option value="12" selected>보통 (12개 - 4개 카테고리 x 3단어)</option>
+                <option value="15">집중 (15개 - 5개 카테고리 x 3단어)</option>
             </select>
             <label>⏳ 지연 시간</label>
             <select id="dTime" style="width:100%; padding:12px; margin:10px 0;">
@@ -65,6 +69,7 @@
                             <th>즉시</th>
                             <th>지연</th>
                             <th>재인</th>
+                            <th>상세</th>
                         </tr>
                     </thead>
                     <tbody id="history-rows"></tbody>
@@ -130,39 +135,33 @@
     </div>
 </div>
 
+<!-- 팝업 모달 (과거 결과 보기) -->
+<div id="modal-detail" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 style="margin-top:0;" id="modal-title">📜 지난 훈련 상세 분석</h3>
+        <div id="modal-scores" class="panel" style="line-height:1.8; font-size:1rem;"></div>
+        <div class="panel">
+            <h4>✅ 재인 검사 상세 결과</h4>
+            <div id="modal-answer-grid" style="text-align: left;"></div>
+        </div>
+        <button onclick="closeModal()" style="width:100%; padding:12px; background:#495057; margin-top:10px;">닫기</button>
+    </div>
+</div>
+
 <script>
-    const wordDB = ["사과", "바나나", "자동차", "비행기", "컴퓨터", "책상", "의자", "호랑이", "사자",
-        "우주선", "시계", "수박", "포도", "연필", "공책", "지우개", "자전거", "고양이", "강아지",
-        "나무", "하늘", "바다", "구름", "태양", "달빛", "별빛", "지구", "화성", "목성",
-        "안경", "모자", "신발", "양말", "바지", "셔츠", "가방", "지갑", "우산", "장갑",
-        "냄비", "숟가락", "젓가락", "접시", "냉장고", "세탁기", "에어컨", "티비", "침대", "소파",
-        "학교", "병원", "은행", "약국", "공원", "시장", "서점", "극장", "카페", "식당",
-        "축구", "야구", "농구", "배구", "수영", "테니스", "골프", "스키", "등산", "낚시",
-        "피아노", "기타", "드럼", "노래", "그림", "사진", "영화", "소설", "시집", "잡지",
-        "도쿄", "파리", "런던", "뉴욕", "시드니", "로마", "이집트",
-        "의사", "교사", "경찰", "소방관", "군인", "요리사", "가수", "배우", "작가", "화가",
-        "여우", "늑대", "토끼", "다람쥐", "곰돌이", "사슴", "코끼리", "기린", "얼룩말", "하마",
-        "독수리", "참새", "비둘기", "까마귀", "제비", "올빼미", "펭귄", "타조", "갈매기", "백로",
-        "고래", "상어", "문어", "오징어", "거북이", "게잡이", "조개", "해파리", "물개", "연어",
-        "장미", "개미", "해바라기", "튤립", "백합", "무궁화", "코스모스", "국화", "매화", "벚꽃",
-        "소나무", "대나무", "단풍나무", "은행나무", "버드나무", "선인장", "잔디", "이끼", "연꽃", "클로버",
-        "김치", "비빔밥", "불고기", "삼겹살", "치킨", "피자", "파스타", "햄버거", "라면", "떡볶이",
-        "커피", "녹차", "우유", "주스", "콜라", "사이다", "맥주", "와인", "막걸리", "생수",
-        "봄날", "여름", "가을", "겨울", "눈사람", "비바람", "무지개", "번개", "안개", "태풍",
-        "기쁨", "슬픔", "분노", "행복", "사랑", "평화", "희망", "용기", "친절", "정직",
-        "금메달", "은반지", "동전", "보석", "다이아", "진주", "크리스탈", "유리창", "거울", "열쇠",
-        "가위", "풀칠", "테이프", "망치", "드라이버", "송곳", "사다리", "빗자루", "걸레", "휴지통",
-        "지하철", "버스", "택시", "기차", "오토바이", "헬기", "트럭", "킥보드", "케이블카", "유모차",
-        "노트북", "마우스", "키보드", "모니터", "프린터", "이어폰", "스피커", "충전기", "배터리", "카메라",
-        "축구공", "야구배트", "글러브", "탁구채", "셔틀콕", "수영모", "스케이트", "헬멧", "보호대", "아령",
-        "도서관", "박물관", "미술관", "과학관", "체육관", "수영장", "놀이공원", "동물원", "식물원", "수족관",
-        "수학", "과학", "역사", "음악", "미술", "체육", "국어", "영어", "코딩", "철학",
-        "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일", "달력", "시계바늘", "모래시계",
-        "소금", "설탕", "간장", "고추장", "된장", "식초", "후추", "참기름", "꿀물", "시럽",
-        "딸기나무", "포도밭", "딸기", "오렌지", "레몬", "라임", "망고", "파인애플", "멜론", "복숭아",
-        "토마토", "오이", "당근", "감자", "고구마", "양파", "마늘", "고추", "배추", "무말랭이",
-        "원숭이", "멧돼지", "고슴도치", "두더지", "펜더", "캥거루", "코알라", "침팬지", "나무늘보",
-        "부엉이", "뻐꾸기", "돌고래", "악어", "도마뱀", "개구리", "맹꽁이", "카멜레온", "달팽이", "지렁이"];
+    // 카테고리별 단어 DB
+    const categorizedWordDB = {
+        동물: ["사자", "호랑이", "코끼리", "기린", "얼룩말", "돼지", "강아지", "늑대", "여우", "토끼", "다람쥐", "곰", "사슴", "하마", "악어", "도마뱀", "개구리", "펭귄", "독수리", "돌고래", "송아지", "상어"],
+        과일: ["사과", "바나나", "수박", "포도", "딸기", "오렌지", "레몬", "라임", "망고", "파인애플", "멜론", "복숭아", "자두", "감귤", "참외", "석류", "자몽", "체리", "무화과", "키위"],
+        가구: ["책상", "의자", "침대", "소파", "옷장", "책장", "식탁", "협탁", "화장대", "서랍장", "신발장", "진열장", "벤치", "흔들의자", "수납장", "거실장"],
+        꽃: ["장미", "해바라기", "튤립", "백합", "무궁화", "코스모스", "국화", "매화", "벚꽃", "연꽃", "카네이션", "안개꽃", "수국", "민들레", "수선화", "제비꽃", "라일락", "봉선화", "할미꽃", "목련"],
+        채소: ["토마토", "오이", "당근", "감자", "고구마", "양파", "마늘", "고추", "배추", "브로콜리", "시금치", "가지", "호박", "대파", "양배추", "상추", "깻잎", "파프리카", "아스파라거스"],
+        교통수단: ["자동차", "비행기", "자전거", "오토바이", "지하철", "버스", "택시", "기차", "트럭", "헬기", "킥보드", "케이블카", "유모차", "우주선", "잠수함", "요트", "여객선", "승합차", "트램"],
+        공구: ["망치", "드라이버", "송곳", "줄자", "스패너", "펜치", "니퍼", "톱", "사다리", "테스터기", "글루건", "납땜기", "수평계", "바이스", "공구함", "샌더기"],
+        신체부위: ["머리", "이마", "눈동자", "코", "귀", "입", "턱", "목", "어깨", "가슴", "배", "허리", "골반", "팔", "팔꿈치", "손목", "손가락", "발가락", "허벅지", "무릎", "종아리", "발목"]
+    };
+
+    const wordDB = Object.values(categorizedWordDB).flat();
 
     let targetWords = [], currentRound = 1, roundScores = [], delayedScore = 0;
     let recogWords = [], recogIdx = 0, userRecogAnswers = [], isAudioActive = false;
@@ -173,6 +172,46 @@
         loadTestHistory();
         autoRestoreSession();
     });
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function generateRandomTargetWords(totalCount) {
+        const categories = shuffleArray(Object.keys(categorizedWordDB));
+        let selectedWords = [];
+
+        if (totalCount === 12) {
+            const chosenCategories = categories.slice(0, 4);
+            chosenCategories.forEach(cat => {
+                const words = shuffleArray([...categorizedWordDB[cat]]).slice(0, 3);
+                selectedWords.push(...words);
+            });
+        } else if (totalCount === 15) {
+            const chosenCategories = categories.slice(0, 5);
+            chosenCategories.forEach(cat => {
+                const words = shuffleArray([...categorizedWordDB[cat]]).slice(0, 3);
+                selectedWords.push(...words);
+            });
+        } else {
+            let catIndex = 0;
+            while(selectedWords.length < totalCount) {
+                const cat = categories[catIndex % categories.length];
+                const available = categorizedWordDB[cat].filter(w => !selectedWords.includes(w));
+                if(available.length > 0) {
+                    const randomWord = available[Math.floor(Math.random() * available.length)];
+                    selectedWords.push(randomWord);
+                }
+                catIndex++;
+            }
+        }
+
+        return shuffleArray(selectedWords);
+    }
 
     function saveCurrentSession(remainingTime = null) {
         const sessionData = {
@@ -285,7 +324,7 @@
         activateAudio(); 
         if(currentRound === 1) {
             const count = parseInt(document.getElementById('wCount').value);
-            targetWords = [...wordDB].sort(() => Math.random() - 0.5).slice(0, count);
+            targetWords = generateRandomTargetWords(count);
             roundScores = [];
         }
         saveCurrentSession();
@@ -414,7 +453,7 @@
         showScreen('step-input'); 
         document.getElementById('input-title').innerText = "지연 회상 단계";
         hiddenInputText = ""; 
-                updateCountDisplay(); 
+        updateCountDisplay(); 
     }
 
     /* 재인 검사 로직 */
@@ -422,8 +461,10 @@
         showScreen('step-recog');
         setOXButtonsDisabled(false);
         if(recogWords.length === 0) {
-            const others = wordDB.filter(w => !targetWords.includes(w)).sort(() => Math.random() - 0.5).slice(0, 24 - targetWords.length);
-            recogWords = [...targetWords, ...others].sort(() => Math.random() - 0.5);
+            const totalDistractors = targetWords.length;
+            const others = wordDB.filter(w => !targetWords.includes(w));
+            const selectedDistractors = shuffleArray(others).slice(0, totalDistractors);
+            recogWords = shuffleArray([...targetWords, ...selectedDistractors]);
         }
         playCurrentRecogWord();
     }
@@ -439,7 +480,6 @@
         msg.lang = 'ko-KR';
         msg.rate = 0.95;
         msg.onend = () => {
-            // 단어 출력이 완전히 끝나면 버튼을 다시 활성화
             setOXButtonsDisabled(false);
         };
         window.speechSynthesis.speak(msg);
@@ -459,10 +499,8 @@
         document.getElementById('replay-btn').disabled = disabled;
     }
 
-    // [수정 사항] 연속 클릭 방지 및 다음 단어 출력 간 0.6초 딜레이 추가
     function handleOX(isO) {
         activateAudio();
-        // 중복 입력 방지를 위해 즉시 버튼 비활성화
         setOXButtonsDisabled(true);
 
         userRecogAnswers.push({
@@ -473,7 +511,6 @@
         recogIdx++;
         saveCurrentSession();
 
-        // 바로 단어가 나오지 않고 0.6초(600ms) 여유를 둔 후 다음 단어 재생
         setTimeout(() => {
             playCurrentRecogWord();
         }, 600);
@@ -496,27 +533,55 @@
             재인 검사 점수: <b>${rScore} / ${recogWords.length}</b> (정답률: ${Math.round((rScore/recogWords.length)*100)}%)
         `;
 
-        document.getElementById('answer-grid').innerHTML = userRecogAnswers.map(ans => {
-            const isTarget = targetWords.includes(ans.word);
+        document.getElementById('answer-grid').innerHTML = generateAnswerGridHTML(targetWords, userRecogAnswers);
+
+        // 상세 분석 내역 포함하여 데이터 저장
+        saveTestRecord({
+            total: targetWords.length,
+            immediate: roundScores.join('→'),
+            delayed: delayedScore,
+            recog: `${rScore}/${recogWords.length}`,
+            targetWords: targetWords,
+            userRecogAnswers: userRecogAnswers,
+            rScore: rScore,
+            recogTotal: recogWords.length
+        });
+        
+        clearCurrentSession();
+    }
+
+    function generateAnswerGridHTML(targets, answers) {
+        return answers.map(ans => {
+            const isTarget = targets.includes(ans.word);
             const isCorrect = (isTarget && ans.userChoice === true) || (!isTarget && ans.userChoice === false);
             
             return `
                 <div class="ans-check ${isCorrect ? 'hit' : 'miss'}">
                     ${isCorrect ? '✔' : '✘'} ${ans.word} 
-                    (내 선택: ${ans.userChoice ? 'O' : 'X'} / 실제정답: ${isTarget ? 'O' : 'X'})
+                    (${ans.userChoice ? 'O' : 'X'} / 정답:${isTarget ? 'O' : 'X'})
                 </div>
             `;
         }).join('');
-
-        saveTestRecord(targetWords.length, roundScores.join('→'), delayedScore, `${rScore}/${recogWords.length}`);
-        clearCurrentSession();
     }
 
-    function saveTestRecord(total, immediate, delayed, recognitionScore) {
+    function saveTestRecord(data) {
         let history = JSON.parse(localStorage.getItem('memory_train_history')) || [];
         const now = new Date();
         const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const newRecord = { date: dateStr, total: total, immediate: immediate, delayed: delayed, recog: recognitionScore };
+        
+        const newRecord = { 
+            id: Date.now(),
+            date: dateStr, 
+            total: data.total, 
+            immediate: data.immediate, 
+            delayed: data.delayed, 
+            recog: data.recog,
+            targetWords: data.targetWords,
+            userRecogAnswers: data.userRecogAnswers,
+            rScore: data.rScore,
+            recogTotal: data.recogTotal
+        };
+
         history.unshift(newRecord);
         if(history.length > 30) history = history.slice(0, 30);
         localStorage.setItem('memory_train_history', JSON.stringify(history));
@@ -526,18 +591,53 @@
         const history = JSON.parse(localStorage.getItem('memory_train_history')) || [];
         const tbody = document.getElementById('history-rows');
         if(history.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="color:#999; padding:20px 0;">저장된 훈련 기록이 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="color:#999; padding:20px 0;">저장된 훈련 기록이 없습니다.</td></tr>`;
             return;
         }
-        tbody.innerHTML = history.map(item => `
+        tbody.innerHTML = history.map((item, index) => `
             <tr>
                 <td style="color:#666;">${item.date}</td>
                 <td><b>${item.total}개</b></td>
                 <td>${item.immediate}</td>
                 <td style="color:#228be6; font-weight:bold;">${item.delayed}개</td>
                 <td style="color:#40c057; font-weight:bold;">${item.recog}</td>
+                <td>
+                    <button onclick="openModal(${index})" style="padding:3px 8px; font-size:0.75rem; background:#339af0; width:auto; border-radius:4px;">결과</button>
+                </td>
             </tr>
         `).join('');
+    }
+
+    function openModal(index) {
+        const history = JSON.parse(localStorage.getItem('memory_train_history')) || [];
+        const item = history[index];
+        if(!item) return;
+
+        document.getElementById('modal-title').innerText = `📜 상세 분석 (${item.date})`;
+        
+        if (item.targetWords && item.userRecogAnswers) {
+            const rate = item.recogTotal ? Math.round((item.rScore / item.recogTotal) * 100) : 0;
+            document.getElementById('modal-scores').innerHTML = `
+                즉시 회상 (1~3회차): ${item.immediate} <br>
+                지연 회상 점수: <b>${item.delayed}개</b> <br>
+                재인 검사 점수: <b>${item.recog}</b> (정답률: ${rate}%)
+            `;
+            document.getElementById('modal-answer-grid').innerHTML = generateAnswerGridHTML(item.targetWords, item.userRecogAnswers);
+        } else {
+            // 과거 버전 기록 호환 처리
+            document.getElementById('modal-scores').innerHTML = `
+                즉시 회상: ${item.immediate} <br>
+                지연 회상 점수: <b>${item.delayed}개</b> <br>
+                재인 검사 점수: <b>${item.recog}</b>
+            `;
+            document.getElementById('modal-answer-grid').innerHTML = `<p style="color:#888; font-size:0.85rem;">이 기록은 세부 단어 내역이 저장되지 않은 이전 버전의 결과입니다.</p>`;
+        }
+
+        document.getElementById('modal-detail').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('modal-detail').classList.add('hidden');
     }
 
     function clearHistory() {
