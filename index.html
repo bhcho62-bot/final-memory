@@ -47,7 +47,7 @@
             <label>🎯 단어 수</label>
             <select id="wCount" style="width:100%; padding:12px; margin:10px 0;">
                 <option value="5">입문 (5개)</option>
-                <option value="12" selected>보통 (12개 - 4개 카테고리 x 3단어)</option>
+                <option value="12" selected>보통 (12개 - 3개 카테고리 x 4단어)</option>
                 <option value="15">집중 (15개 - 5개 카테고리 x 3단어)</option>
             </select>
             <label>⏳ 지연 시간</label>
@@ -151,14 +151,14 @@
 <script>
     // 카테고리별 단어 DB
     const categorizedWordDB = {
-        문구: ["연필", "지우개", "공책", "필통", "볼펜", "가위", "색연필", "형광펜", "샤프", "포스트잇", "스태플러", "클립", "네임펜", "메모지", "스케치북", "색종이"],
-        주방기구: ["냄비", "프라이팬", "도마", "칼", "국자", "뒤집개", "집게", "가위", "주걱", "수저", "접시", "공기", "청소기", "냉장고", "세탁기", "계량컵", "강판", "도자기", "행주"],
-        동물: ["사자", "호랑이", "코끼리", "기린", "얼룩말", "돼지", "강아지", "늑대", "여우", "토끼", "다람쥐", "곰", "사슴", "하마", "악어", "도마뱀", "개구리", "펭귄", "독수리", "돌고래", "송아지", "상어"],
-        과일: ["사과", "바나나", "수박", "포도", "딸기", "오렌지", "레몬", "라임", "망고", "파인애플", "멜론", "복숭아", "자두", "감귤", "참외", "석류", "무화과", "키위"],
-        가구: ["책상", "의자", "침대", "소파", "옷장", "책장", "식탁", "협탁", "화장대", "서랍장", "신발장", "진열장", "벤치", "흔들의자", "수납장", "거실장"],
-        꽃: ["장미", "해바라기", "튤립", "백합", "무궁화", "코스모스", "국화", "매화", "벚꽃", "연꽃", "카네이션", "안개꽃", "수국", "민들레", "수선화", "제비꽃", "라일락", "봉선화", "할미꽃", "목련"],
-        채소: ["토마토", "오이", "당근", "감자", "고구마", "양파", "마늘", "고추", "배추", "브로콜리", "시금치", "가지", "호박", "대파", "양배추", "상추", "깻잎", "파프리카"],
-        교통수단: ["자동차", "비행기", "자전거", "오토바이", "지하철", "버스", "택시", "기차", "트럭", "헬리콥터", "킥보드", "케이블카", "유모차", "우주선", "잠수함", "요트", "여객선", "승합차", "트램"]
+        '꽃': ['장미','벚꽃','수선화','봉선화','채송화','코스모스','호박꽃','아카시아','동백꽃','매화','카네이션','안개꽃','난초','개나리','철쭉','목련','유채꽃', '해바라기', '튤립', '무궁화', '백합', '진달래', '국화', '수국'],
+        '주방기구': ['냄비', '프라이팬', '뒤집개', '채반','도마','접시','머그컵', '숟가락','나이프','포크','쟁반','주걱','젓가락','그릇','대접','국자', '거품기','감자칼','절구','식칼','밥솥','주전자','오븐','토스터','전기포트', '청소기','냉장고','믹서기', '전자레인지', '에어프라이어'],
+        '문구': ['연필', '지우개','양면테이프','펀치','압정','클립','스카치테이프','컴퍼스','각도기','수정액','스테플러','물감','붓','스티커','파일', '볼펜','샤프','만년필','크레용','색연필','노트','색종이','메모지','편지지','봉투','딱풀', '자', '가위', '풀', '필통', '공책', '형광펜'],
+        '동물': ['사자', '호랑이', '코끼리', '기린', '토끼', '강아지', '고양이', '얼룩말', '곰'],
+        '과일': ['사과', '바나나', '포도', '딸기', '수박', '복숭아', '오렌지', '참외', '자두'],
+        '가구': ['침대', '책상', '의자', '옷장', '소파', '식탁', '화장대', '책장', '수납장'],
+        '채소': ['당근', '양파', '오이', '시금치', '마늘', '감자', '고구마', '배추', '무'],
+        '교통수단': ['비행기', '자전거', '자동차', '기차', '지하철', '오토바이', '버스', '배', '택시']
     };
 
     const wordDB = Object.values(categorizedWordDB).flat();
@@ -183,39 +183,47 @@
     }
 
     function generateRandomTargetWords(totalCount) {
-        const categories = shuffleArray(Object.keys(categorizedWordDB));
+        // 직전에 사용한 단어 목록 가져오기
+        let usedWords = JSON.parse(localStorage.getItem('memory_train_used_words')) || [];
         let selectedWords = [];
 
         if (totalCount === 12) {
-            // 항상 포함할 카테고리
-            const fixedCategories = ["꽃", "주방기구", "문구"];
-            const otherCategories = Object.keys(categorizedWordDB).filter(cat => !fixedCategories.includes(cat));
-            const randomCategory = shuffleArray(otherCategories)[0];
-            const chosenCategories = [...fixedCategories, randomCategory];
+            // 요청사항: '꽃', '주방기구', '문구' 카테고리에서만 각각 4개씩 발췌
+            const targetCategories = ["꽃", "주방기구", "문구"];
 
-            chosenCategories.forEach(cat => {
-                const words = shuffleArray([...categorizedWordDB[cat]]).slice(0, 3);
-                selectedWords.push(...words);
+            targetCategories.forEach(cat => {
+                let pool = categorizedWordDB[cat] || [];
+                // 이전 사용 단어 제외한 후보군
+                let available = pool.filter(w => !usedWords.includes(w));
+
+                // 사용할 수 있는 단어가 4개 미만이면 전체 풀 사용 (초기화 개념)
+                if (available.length < 4) {
+                    available = pool;
+                }
+
+                const chosen = shuffleArray(available).slice(0, 4);
+                selectedWords.push(...chosen);
             });
         } else if (totalCount === 15) {
+            const categories = shuffleArray(Object.keys(categorizedWordDB));
             const chosenCategories = categories.slice(0, 5);
             chosenCategories.forEach(cat => {
-                const words = shuffleArray([...categorizedWordDB[cat]]).slice(0, 3);
+                let pool = categorizedWordDB[cat] || [];
+                let available = pool.filter(w => !usedWords.includes(w));
+                if (available.length < 3) available = pool;
+                
+                const words = shuffleArray(available).slice(0, 3);
                 selectedWords.push(...words);
             });
         } else {
-            // 5개 단어 등 기본 무작위 선택
-            let catIndex = 0;
-            while(selectedWords.length < totalCount) {
-                const cat = categories[catIndex % categories.length];
-                const available = categorizedWordDB[cat].filter(w => !selectedWords.includes(w));
-                if(available.length > 0) {
-                    const randomWord = available[Math.floor(Math.random() * available.length)];
-                    selectedWords.push(randomWord);
-                }
-                catIndex++;
-            }
+            // 5개 단어 선택 시
+            let pool = wordDB.filter(w => !usedWords.includes(w));
+            if (pool.length < totalCount) pool = wordDB;
+            selectedWords = shuffleArray(pool).slice(0, totalCount);
         }
+
+        // 선택된 단어를 이번에 사용한 단어로 저장 (다음 테스트 시 중복 방지)
+        localStorage.setItem('memory_train_used_words', JSON.stringify(selectedWords));
 
         return shuffleArray(selectedWords);
     }
